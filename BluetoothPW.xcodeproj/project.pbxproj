@@ -12,6 +12,10 @@
 		BE37B8DE21CEC63600370338 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BE37B8DC21CEC63600370338 /* Main.storyboard */; };
 		BE37B8E021CEC63800370338 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BE37B8DF21CEC63800370338 /* Assets.xcassets */; };
 		BE37B8E321CEC63800370338 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BE37B8E121CEC63800370338 /* LaunchScreen.storyboard */; };
+		EDAF8D792211E13A00F981AD /* BCBuildMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDAF8D782211E13A00F981AD /* BCBuildMessages.swift */; };
+		EDAF8D7B2211E17C00F981AD /* CalculoCRC.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDAF8D7A2211E17C00F981AD /* CalculoCRC.swift */; };
+		EDAF8D7D221332F000F981AD /* CollectionFuncs.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDAF8D7C221332F000F981AD /* CollectionFuncs.swift */; };
+		EDAF8D7F2214B9C300F981AD /* DataManagerDefault.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDAF8D7E2214B9C300F981AD /* DataManagerDefault.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -22,6 +26,10 @@
 		BE37B8DF21CEC63800370338 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		BE37B8E221CEC63800370338 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		BE37B8E421CEC63800370338 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		EDAF8D782211E13A00F981AD /* BCBuildMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BCBuildMessages.swift; sourceTree = "<group>"; };
+		EDAF8D7A2211E17C00F981AD /* CalculoCRC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculoCRC.swift; sourceTree = "<group>"; };
+		EDAF8D7C221332F000F981AD /* CollectionFuncs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionFuncs.swift; sourceTree = "<group>"; };
+		EDAF8D7E2214B9C300F981AD /* DataManagerDefault.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataManagerDefault.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,6 +68,10 @@
 				BE37B8DF21CEC63800370338 /* Assets.xcassets */,
 				BE37B8E121CEC63800370338 /* LaunchScreen.storyboard */,
 				BE37B8E421CEC63800370338 /* Info.plist */,
+				EDAF8D782211E13A00F981AD /* BCBuildMessages.swift */,
+				EDAF8D7A2211E17C00F981AD /* CalculoCRC.swift */,
+				EDAF8D7C221332F000F981AD /* CollectionFuncs.swift */,
+				EDAF8D7E2214B9C300F981AD /* DataManagerDefault.swift */,
 			);
 			path = BluetoothPW;
 			sourceTree = "<group>";
@@ -136,6 +148,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				BE37B8DB21CEC63600370338 /* ViewController.swift in Sources */,
+				EDAF8D7F2214B9C300F981AD /* DataManagerDefault.swift in Sources */,
+				EDAF8D792211E13A00F981AD /* BCBuildMessages.swift in Sources */,
+				EDAF8D7D221332F000F981AD /* CollectionFuncs.swift in Sources */,
+				EDAF8D7B2211E17C00F981AD /* CalculoCRC.swift in Sources */,
 				BE37B8D921CEC63600370338 /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -283,13 +299,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = JQ52M4QL3U;
+				DEVELOPMENT_TEAM = C26S56366Y;
 				INFOPLIST_FILE = BluetoothPW/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = br.com.lf.BluetoothPW;
+				PRODUCT_BUNDLE_IDENTIFIER = com.BluetoothPW;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.2;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -301,13 +318,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = JQ52M4QL3U;
+				DEVELOPMENT_TEAM = C26S56366Y;
 				INFOPLIST_FILE = BluetoothPW/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = br.com.lf.BluetoothPW;
+				PRODUCT_BUNDLE_IDENTIFIER = com.BluetoothPW;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.2;
 				TARGETED_DEVICE_FAMILY = "1,2";
