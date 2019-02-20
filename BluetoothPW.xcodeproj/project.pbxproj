@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A563C53E264F21C1476211C4 /* Pods_BluetoothPW.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D71AD79C22ED793574517DBB /* Pods_BluetoothPW.framework */; };
 		BE37B8D921CEC63600370338 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE37B8D821CEC63600370338 /* AppDelegate.swift */; };
 		BE37B8DB21CEC63600370338 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE37B8DA21CEC63600370338 /* ViewController.swift */; };
 		BE37B8DE21CEC63600370338 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BE37B8DC21CEC63600370338 /* Main.storyboard */; };
@@ -19,6 +20,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		563EDFB25BD7DB3ADEA2F571 /* Pods-BluetoothPW.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BluetoothPW.debug.xcconfig"; path = "Pods/Target Support Files/Pods-BluetoothPW/Pods-BluetoothPW.debug.xcconfig"; sourceTree = "<group>"; };
+		717DE6095B6760102546E49B /* Pods-BluetoothPW.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BluetoothPW.release.xcconfig"; path = "Pods/Target Support Files/Pods-BluetoothPW/Pods-BluetoothPW.release.xcconfig"; sourceTree = "<group>"; };
 		BE37B8D521CEC63600370338 /* BluetoothPW.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BluetoothPW.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BE37B8D821CEC63600370338 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		BE37B8DA21CEC63600370338 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -26,6 +29,8 @@
 		BE37B8DF21CEC63800370338 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		BE37B8E221CEC63800370338 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		BE37B8E421CEC63800370338 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D71AD79C22ED793574517DBB /* Pods_BluetoothPW.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_BluetoothPW.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		ED2FA725221C50F200D7E599 /* BluetoothPW-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "BluetoothPW-Bridging-Header.h"; sourceTree = "<group>"; };
 		EDAF8D782211E13A00F981AD /* BCBuildMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BCBuildMessages.swift; sourceTree = "<group>"; };
 		EDAF8D7A2211E17C00F981AD /* CalculoCRC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculoCRC.swift; sourceTree = "<group>"; };
 		EDAF8D7C221332F000F981AD /* CollectionFuncs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionFuncs.swift; sourceTree = "<group>"; };
@@ -37,17 +42,30 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A563C53E264F21C1476211C4 /* Pods_BluetoothPW.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		762647D8DEC5E7231A60BBAB /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				563EDFB25BD7DB3ADEA2F571 /* Pods-BluetoothPW.debug.xcconfig */,
+				717DE6095B6760102546E49B /* Pods-BluetoothPW.release.xcconfig */,
+			);
+			name = Pods;
+			sourceTree = "<group>";
+		};
 		BE37B8CC21CEC63600370338 = {
 			isa = PBXGroup;
 			children = (
 				BE37B8D721CEC63600370338 /* BluetoothPW */,
 				BE37B8D621CEC63600370338 /* Products */,
+				762647D8DEC5E7231A60BBAB /* Pods */,
+				E3192B4CA989E289EFA1E301 /* Frameworks */,
+				ED2FA725221C50F200D7E599 /* BluetoothPW-Bridging-Header.h */,
 			);
 			sourceTree = "<group>";
 		};
@@ -76,6 +94,14 @@
 			path = BluetoothPW;
 			sourceTree = "<group>";
 		};
+		E3192B4CA989E289EFA1E301 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D71AD79C22ED793574517DBB /* Pods_BluetoothPW.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -83,9 +109,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = BE37B8E721CEC63800370338 /* Build configuration list for PBXNativeTarget "BluetoothPW" */;
 			buildPhases = (
+				B10959C548E03E2CE30818CE /* [CP] Check Pods Manifest.lock */,
 				BE37B8D121CEC63600370338 /* Sources */,
 				BE37B8D221CEC63600370338 /* Frameworks */,
 				BE37B8D321CEC63600370338 /* Resources */,
+				2D84E1FF47854749C592E4C0 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -108,6 +136,7 @@
 				TargetAttributes = {
 					BE37B8D421CEC63600370338 = {
 						CreatedOnToolsVersion = 10.1;
+						LastSwiftMigration = 1010;
 					};
 				};
 			};
@@ -141,6 +170,53 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		2D84E1FF47854749C592E4C0 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${SRCROOT}/Pods/Target Support Files/Pods-BluetoothPW/Pods-BluetoothPW-frameworks.sh",
+				"${BUILT_PRODUCTS_DIR}/BluetoothKit/BluetoothKit.framework",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/BluetoothKit.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-BluetoothPW/Pods-BluetoothPW-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		B10959C548E03E2CE30818CE /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-BluetoothPW-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		BE37B8D121CEC63600370338 /* Sources */ = {
@@ -296,8 +372,10 @@
 		};
 		BE37B8E821CEC63800370338 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 563EDFB25BD7DB3ADEA2F571 /* Pods-BluetoothPW.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = C26S56366Y;
 				INFOPLIST_FILE = BluetoothPW/Info.plist;
@@ -308,6 +386,8 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.BluetoothPW;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "BluetoothPW-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 4.2;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -315,8 +395,10 @@
 		};
 		BE37B8E921CEC63800370338 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 717DE6095B6760102546E49B /* Pods-BluetoothPW.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = C26S56366Y;
 				INFOPLIST_FILE = BluetoothPW/Info.plist;
@@ -327,6 +409,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.BluetoothPW;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "BluetoothPW-Bridging-Header.h";
 				SWIFT_VERSION = 4.2;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

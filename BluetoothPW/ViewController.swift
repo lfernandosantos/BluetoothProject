@@ -9,8 +9,22 @@
 import UIKit
 
 import CoreBluetooth
+import BluetoothKit
 
-class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralDelegate{
+class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralDelegate, BKAvailabilityObserver, CBPeripheralManagerDelegate{
+    func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
+        print("peripheralManagerDidUpdateState")
+    }
+    
+    
+    func availabilityObserver(_ availabilityObservable: BKAvailabilityObservable, availabilityDidChange availability: BKAvailability) {
+        print("remotePeripheralDidDisconnect")
+    }
+    
+    func availabilityObserver(_ availabilityObservable: BKAvailabilityObservable, unavailabilityCauseDidChange unavailabilityCause: BKUnavailabilityCause) {
+        print("remotePeripheralDidDisconnect")
+    }
+    
 
     var centralManager: CBCentralManager!
     var scale: CBPeripheral!
@@ -26,7 +40,7 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
     var sizeWrite = 0
     var conta = 0
     
-    var items: [ItemCollection] = [ItemCollection(ppfunc: "OPN", color: UIColor(named: "open")! ), ItemCollection(ppfunc: "READ", color: UIColor(named: "read")!), ItemCollection(ppfunc: "CLO", color: UIColor(named: "close")!), ItemCollection(ppfunc: "GIN", color: UIColor(named: "open")!), ItemCollection(ppfunc: "SGC", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GCR", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GCRR", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "TLI", color: UIColor(named: "tableIniti")!), ItemCollection(ppfunc: "TLR", color: UIColor(named: "tableRec")!), ItemCollection(ppfunc: "TLE", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GTS", color: UIColor(named: "open")!), ItemCollection(ppfunc: "GOCS", color: UIColor(named: "read")!), ItemCollection(ppfunc: "GOC", color: UIColor(named: "read")!)]
+    var items: [ItemCollection] = [ItemCollection(ppfunc: "OPN", color: UIColor(named: "open")! ), ItemCollection(ppfunc: "READ", color: UIColor(named: "read")!), ItemCollection(ppfunc: "CLO", color: UIColor(named: "close")!), ItemCollection(ppfunc: "GIN", color: UIColor(named: "open")!), ItemCollection(ppfunc: "SGC", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GCR", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GCRR", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "TLI", color: UIColor(named: "tableIniti")!), ItemCollection(ppfunc: "TLR", color: UIColor(named: "tableRec")!), ItemCollection(ppfunc: "TLE", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GTS", color: UIColor(named: "open")!), ItemCollection(ppfunc: "GOCS", color: UIColor(named: "read")!), ItemCollection(ppfunc: "GOC", color: UIColor(named: "read")!), ItemCollection(ppfunc: "FNC", color: UIColor(named: "read")!)]
 
     
 
@@ -41,6 +55,8 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
         super.viewDidLoad()
         centralManager = CBCentralManager()
         centralManager.delegate = self
+        
+        
 
         tableServices.delegate = self
         tableCharac.delegate = self
@@ -50,7 +66,10 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
 
         self.hideKeyboardWhenTappedAround()
         
-
+        let bkCentral = BKCentral()
+        bkCentral.delegate = self
+        
+        
     }
 
 
@@ -61,7 +80,6 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
         } else {
             scale.writeValue(Data(bytes: BCBuildMessages().showDisplay(msg: ppFuncTextFiled.text ?? "muxiPAY")), for: characteristic!, type: .withResponse)
         }
-        
     }
     
     func sendMore(_ data: Data ){
@@ -99,11 +117,13 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
             dataToWrite.append(dataMSG)
         }
         
+
         
     }
 
     func sendMessage(message : Data){
-             scale.writeValue(message, for: characteristic!, type: .withResponse)
+      
+             scale.writeValue(message, for: characteristic!, type: .withoutResponse)
         
     }
 
@@ -129,10 +149,11 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
         return subData
     }
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        
         print("state: \(central.state)")
         if central.state == .poweredOn {
             print("open")
-            centralManager.scanForPeripherals(withServices: nil, options: nil)
+           centralManager.scanForPeripherals(withServices: nil, options: nil)
         }
     }
 
@@ -349,7 +370,13 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
         } else if ppFunc.contains("TLR") {
             print("func: \(ppFunc)")
             
-            sendMessage(message: Data(bytes: BCBuildMessages().loadTableLoadRec(table: "0328410107A00000000410100000000000000000000201MASTERCARD ••••••030082008200820769862MERCH00000000011234TERM0001E0F0C06000B0F 00021C8000000000000000000C800000000•••••••••••••••••••••••••••••••• ••••••••••••••••••••••••••••••••••••••••••••••••9F02069F03069F1A029 5055F2A029A039C010000Y1Z1Y3Z306210202101000000000000000000000000000 000302VISA•ELECTRON•••041091030652005060708000000000000000000000030 3VISA•CASH•••••••010000050000000000000000000015210198607612,.R$••1")))
+            DataManagerDefault().tables.forEach { (tab) in
+                
+                let msg = BCBuildMessages().loadTableLoadRec(table: tab)
+                teste(data: msg)
+            }
+//            let msg = BCBuildMessages().loadTableLoadRec(table: "0328410107A00000000410100000000000000000000201MASTERCARD ••••••030082008200820769862MERCH00000000011234TERM0001E0F0C06000B0F 00021C8000000000000000000C800000000•••••••••••••••••••••••••••••••• ••••••••••••••••••••••••••••••••••••••••••••••••9F02069F03069F1A029 5055F2A029A039C010000Y1Z1Y3Z306210202101000000000000000000000000000 000302VISA•ELECTRON•••041091030652005060708000000000000000000000030 3VISA•CASH•••••••010000050000000000000000000015210198607612,.R$••1")
+            
             
         } else if ppFunc.contains("TLE") {
             print("func: \(ppFunc)")
@@ -366,7 +393,7 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
             print("func: \(ppFunc)")
             
             let input = "000000000500000000000000010301                                100000FA010000003E899000"
-            let tags = "023829F279F269F36959F349F379F335F289F109A5F349F0B"
+            let tags = "023849F279F269F36959F349F379F335F289F109A5F349F0B"
             let tagsOpt = "000"
             
             sendMessage(message: Data(bytes: BCBuildMessages().startGoOnChip(input: input, tags: tags, tagsOpt: tagsOpt)))
@@ -374,24 +401,134 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
             
         } else if ppFunc.contains("GOC") {
             print("func: \(ppFunc)")
-            
-            
-            let m: [UInt8] = [0x16, 0x47, 0x4F, 0x43, 0x30, 0x38, 0x36, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x34, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x31, 0x30, 0x30, 0x33, 0x30, 0x31, 0x41, 0x36, 0x34, 0x44, 0x34, 0x38, 0x34, 0x31, 0x33, 0x30, 0x42, 0x38, 0x44, 0x31, 0x33, 0x42, 0x33, 0x41, 0x30, 0x36, 0x36, 0x34, 0x37, 0x41, 0x32, 0x31, 0x37, 0x43, 0x46, 0x46, 0x31, 0x37, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x38, 0x35, 0x30]
-            
-            let m2: [UInt8] = [ 0x15, 0x34, 0x31, 0x38, 0x32, 0x38, 0x34, 0x39, 0x31, 0x39, 0x35, 0x35, 0x46, 0x32, 0x41, 0x35, 0x46, 0x33, 0x34, 0x39, 0x41, 0x39, 0x43, 0x39, 0x46, 0x30, 0x32, 0x39, 0x46, 0x30, 0x33, 0x39, 0x46, 0x30, 0x39, 0x39, 0x46, 0x31, 0x30, 0x39, 0x46, 0x31, 0x41, 0x39, 0x46, 0x31, 0x45, 0x39, 0x46, 0x32, 0x36, 0x39, 0x46, 0x32, 0x37, 0x39, 0x46, 0x33, 0x33, 0x39, 0x46, 0x33, 0x34, 0x39, 0x46, 0x33, 0x35, 0x39, 0x46, 0x33, 0x36, 0x39, 0x46, 0x33, 0x37, 0x39, 0x46, 0x34, 0x31, 0x39, 0x42, 0x39, 0x46, 0x36, 0x45, 0x30, 0x30, 0x33, 0x30, 0x30, 0x30, 0x17, 0x23, 0x75]
-            
 
-            //sendMessage(message: Data(bytes: m))
             
-            sendMessage(message: Data(bytes: BCBuildMessages().goOnChip(input: "086000000000500000000000000010301                                100000FA010000003E899000049023829F279F269F36959F349F379F335F289F109A5F349F0B003000")))
+            let m: [UInt8] = [0x16, 0x47, 0x4F, 0x43, 0x30, 0x38, 0x36, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x34, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x31, 0x30, 0x30, 0x33, 0x30, 0x31, 0x41, 0x36, 0x34, 0x44, 0x34, 0x38, 0x34, 0x31, 0x33, 0x30, 0x42, 0x38, 0x44, 0x31, 0x33, 0x42, 0x33, 0x41, 0x30, 0x36, 0x36, 0x34, 0x37, 0x41, 0x32, 0x31, 0x37, 0x43, 0x46, 0x46, 0x31, 0x37, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x38, 0x35, 0x30, 0x34, 0x31, 0x38, 0x32, 0x38, 0x34, 0x39, 0x31, 0x39, 0x35, 0x35, 0x46, 0x32, 0x41, 0x35, 0x46, 0x33, 0x34, 0x39, 0x41, 0x39, 0x43, 0x39, 0x46, 0x30, 0x32, 0x39, 0x46, 0x30, 0x33, 0x39, 0x46, 0x30, 0x39, 0x39, 0x46, 0x31, 0x30, 0x39, 0x46, 0x31, 0x41, 0x39, 0x46, 0x31, 0x45, 0x39, 0x46, 0x32, 0x36, 0x39, 0x46, 0x32, 0x37, 0x39, 0x46, 0x33, 0x33, 0x39, 0x46, 0x33, 0x34, 0x39, 0x46, 0x33, 0x35, 0x39, 0x46, 0x33, 0x36, 0x39, 0x46, 0x33, 0x37, 0x39, 0x46, 0x34, 0x31, 0x39, 0x42, 0x39, 0x46, 0x36, 0x45, 0x30, 0x30, 0x33, 0x30, 0x30, 0x30, 0x17, 0x23, 0x75]
             
-   
             
+            //chunck(buffer: m)
+            
+            teste(data: m)
+    
             // funciona : 086000000000500000000000000010301                                100000FA010000003E899000049023829F279F269F36959F349F379F335F289F109A5F349F0B003000
             
-            //086000000002000000000000000100301A64D484130B8D13B3A06647A217CFF17000000000000000000000000085041828491955F2A5F349A9C9F029F039F099F109F1A9F1E9F269F279F339F349F359F369F379F419B9F6E003000
+                       //086000000002000000000000000100301A64D484130B8D13B3A06647A217CFF17000000000000000000000000085041828491955F2A5F349A9C9F029F039F099F109F1A9F1E9F269F279F339F349F359F369F379F419B9F6E003000
+        } else if ppFunc.contains("FNC"){
+            let stringTest = "FNC 010 0000000000 1150569F029F039F1A955F2A9A9C9F379F359F279F26829F369F109F345F349F339F1E9F099F419F069F0D9F0E9F0F9F429F3B5F285F555F569F07"
+            
+            let input = "0000000000"
+            let tags = "0569F029F039F1A955F2A9A9C9F379F359F279F26829F369F109F345F349F339F1E9F099F419F069F0D9F0E9F0F9F429F3B5F285F555F569F07"
+            
+            let msg = BCBuildMessages.getFinishChip(input: input, inputTags: tags, output: "")
+            
+            teste(data: msg)
         }
 
+    }
+    
+}
+
+extension ViewController: BKCentralDelegate {
+    func central(_ central: BKCentral, remotePeripheralDidDisconnect remotePeripheral: BKRemotePeripheral) {
+        print("remotePeripheralDidDisconnect")
+    }
+    
+    
+    func chunck(buffer: [UInt8]) {
+        
+        var dataToSend = Data(bytes: buffer, count:buffer.count + 1)
+        var sendDataIndex: NSInteger = 0
+        print(String(bytes: dataToSend, encoding: .utf8))
+        
+        var didSend = true
+        
+        while (didSend) {
+            let mtu = scale.maximumWriteValueLength(for: .withoutResponse)-1
+            var amountToSend = dataToSend.count - sendDataIndex
+            
+            if (amountToSend > mtu) {
+                amountToSend = mtu
+            } else {
+                didSend = false
+            }
+            
+            let chunk = Data(bytes: [UInt8](dataToSend) + [UInt8(sendDataIndex)], count: amountToSend)
+            
+            scale.writeValue(chunk, for: characteristic!, type: .withoutResponse)
+            
+            let stringFromData = String(bytes: chunk, encoding: .utf8)
+            print("stringFromData \(stringFromData)")
+            
+            sendDataIndex += amountToSend
+            
+        }
+        
+        //        NSData *dataToSend = [NSData dataWithBytes:buffer length:commandLength+1];
+        //        NSInteger sendDataIndex = 0;
+        //
+        //        NSLog(@"%@", [NSString stringWithUTF8String:dataToSend.bytes]);
+        //        BOOL didSend = YES;
+        //
+        //        while (didSend) {
+        //            // minus 1 to avoid exceeding the maximum value
+        //            NSInteger mtu = [selectedPeripheral maximumWriteValueLengthForType:CBCharacteristicWriteWithResponse] - 1;
+        //            NSInteger amountToSend = dataToSend.length - sendDataIndex;
+        //
+        //            if (amountToSend > mtu)
+        //            {
+        //                amountToSend = mtu;
+        //            }
+        //            else
+        //            {
+        //                didSend = NO;
+        //            }
+        //
+        //            NSData *chunk = [NSData dataWithBytes:dataToSend.bytes + sendDataIndex length:amountToSend];
+        //
+        //            [selectedPeripheral writeValue:chunk forCharacteristic:[self writeCharacteristic] type:CBCharacteristicWriteWithResponse];
+        //
+        //            NSString *stringFromData = [[NSString alloc] initWithData:chunk encoding:NSUTF8StringEncoding];
+        //            NSLog(@"Sent: %@", stringFromData);
+        //
+        //            sendDataIndex += amountToSend;
+        // }
+    }
+    
+    
+    func teste( data: [UInt8]){
+        
+        var buffer = data
+//        var buffer: [UInt8] = [0x16, 0x47, 0x4F, 0x43, 0x30, 0x38, 0x36, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x34, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x31, 0x30, 0x30, 0x33, 0x30, 0x31, 0x41, 0x36, 0x34, 0x44, 0x34, 0x38, 0x34, 0x31, 0x33, 0x30, 0x42, 0x38, 0x44, 0x31, 0x33, 0x42, 0x33, 0x41, 0x30, 0x36, 0x36, 0x34, 0x37, 0x41, 0x32, 0x31, 0x37, 0x43, 0x46, 0x46, 0x31, 0x37, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x38, 0x35, 0x30, 0x34, 0x31, 0x38, 0x32, 0x38, 0x34, 0x39, 0x31, 0x39, 0x35, 0x35, 0x46, 0x32, 0x41, 0x35, 0x46, 0x33, 0x34, 0x39, 0x41, 0x39, 0x43, 0x39, 0x46, 0x30, 0x32, 0x39, 0x46, 0x30, 0x33, 0x39, 0x46, 0x30, 0x39, 0x39, 0x46, 0x31, 0x30, 0x39, 0x46, 0x31, 0x41, 0x39, 0x46, 0x31, 0x45, 0x39, 0x46, 0x32, 0x36, 0x39, 0x46, 0x32, 0x37, 0x39, 0x46, 0x33, 0x33, 0x39, 0x46, 0x33, 0x34, 0x39, 0x46, 0x33, 0x35, 0x39, 0x46, 0x33, 0x36, 0x39, 0x46, 0x33, 0x37, 0x39, 0x46, 0x34, 0x31, 0x39, 0x42, 0x39, 0x46, 0x36, 0x45, 0x30, 0x30, 0x33, 0x30, 0x30, 0x30, 0x17, 0x23, 0x75]
+        
+        
+        var commandLength = buffer.count
+        let dataToSend = NSData(bytes: &buffer, length: commandLength + 1)
+        var sendDataIndex: Int = 0
+        
+        
+        print("\(String(data: dataToSend as Data, encoding: .utf8) ?? "")")
+        var didSend = true
+        
+        while didSend {
+            // minus 1 to avoid exceeding the maximum value
+            let mtu: Int = scale.maximumWriteValueLength(for: .withoutResponse) - 1
+            var amountToSend: Int = dataToSend.length - sendDataIndex
+            
+            if amountToSend > mtu {
+                amountToSend = mtu
+            } else {
+                didSend = false
+            }
+            
+            let chunk = Data(bytes: (dataToSend.bytes + sendDataIndex), count: amountToSend)
+            
+            scale.writeValue(chunk, for: characteristic!, type: .withResponse)
+            
+            let stringFromData = String(data: chunk, encoding: .utf8)
+            print("Sent: \(stringFromData ?? "")")
+            
+            sendDataIndex += amountToSend
+        }
     }
 }
 

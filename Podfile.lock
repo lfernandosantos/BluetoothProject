@@ -1,0 +1,16 @@
+PODS:
+  - BluetoothKit (0.4.0)
+
+DEPENDENCIES:
+  - BluetoothKit
+
+SPEC REPOS:
+  https://github.com/cocoapods/specs.git:
+    - BluetoothKit
+
+SPEC CHECKSUMS:
+  BluetoothKit: 00e189e01ba765e2689c46fbd8d0ede62984441b
+
+PODFILE CHECKSUM: 650d561167e2e5b4015b89bd61afe533dec150f0
+
+COCOAPODS: 1.5.3
