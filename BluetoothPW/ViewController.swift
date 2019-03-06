@@ -25,6 +25,10 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
     var dataToWrite = [Data]()
     var sizeWrite = 0
     var conta = 0
+
+    var callbackMessage: [String] = [String]()
+    var callbackStatus = CallbackMessageStatus.beginning
+    
     
     var items: [ItemCollection] = [ItemCollection(ppfunc: "OPN", color: UIColor(named: "open")! ), ItemCollection(ppfunc: "READ", color: UIColor(named: "read")!), ItemCollection(ppfunc: "CLO", color: UIColor(named: "close")!), ItemCollection(ppfunc: "GIN", color: UIColor(named: "open")!), ItemCollection(ppfunc: "SGC", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GCR", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GCRR", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "TLI", color: UIColor(named: "tableIniti")!), ItemCollection(ppfunc: "TLR", color: UIColor(named: "tableRec")!), ItemCollection(ppfunc: "TLE", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GTS", color: UIColor(named: "open")!), ItemCollection(ppfunc: "GOCS", color: UIColor(named: "read")!), ItemCollection(ppfunc: "GOC", color: UIColor(named: "read")!)]
 
@@ -196,14 +200,24 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
         
         
         if let data = characteristic.value {
-            
-            let dataSTR = String(data: data, encoding: String.Encoding.utf8)
-            print("data STR: ")
-            print(dataSTR)
-            print("------")
-            print(String(data: data, encoding: String.Encoding.ascii))
 
-            text.text = " utf8:  \(dataSTR), \n ascii: \(String(data: data, encoding: String.Encoding.ascii)) \n charc: \(characteristic) "
+            print(String(data: data, encoding: .ascii))
+            BCBuildMessages().readMessage(data: data) { (status, function, msg) in
+
+                print("function => \(function.rawValue)")
+                switch status {
+                case .beginning: print("beginning")
+                case .middle:
+                    print("middle")
+                    print(String(data: msg, encoding: .ascii))
+                case .end:
+                    print("end")
+                    print(String(data: msg, encoding: .ascii))
+                }
+
+                self.text.text = " Func:  \(function.rawValue), \n msg: \(String(data: msg, encoding: String.Encoding.ascii)!)"
+            }
+
         }
     }
     
@@ -320,14 +334,16 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
     func clickFunc(_ ppFunc: String) {
         if ppFunc.contains("GIN") {
             print("func: GIN")
-            sendMessage(message: Data(bytes: BCBuildMessages().getInfo()))
+            writeMessage(bytes: BCBuildMessages().getInfo(input: "00"))
         } else if ppFunc.contains("OPN") {
             print("func: \(ppFunc)")
-            sendMessage(message: Data(bytes: BCBuildMessages().open()))
+
+            writeMessage(bytes: BCBuildMessages().open())
             
         } else if ppFunc.contains("CLO") {
             print("func: \(ppFunc)")
-            sendMessage(message: Data(bytes: BCBuildMessages().close()))
+
+            writeMessage(bytes: BCBuildMessages().close())
             
         } else if ppFunc.contains("READ") {
             if let char = characteristic {
@@ -335,32 +351,34 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
             }
         } else if ppFunc.contains("SGC") {
             print("func: \(ppFunc)")
-            sendMessage(message: Data(bytes: BCBuildMessages().startGetCard()))
+
+            writeMessage(bytes: BCBuildMessages().startGetCard())
             
         } else if ppFunc.contains("GCR") {
             print("func: \(ppFunc)")
-            sendMessage(message: Data(bytes: BCBuildMessages().getCard()))
+            writeMessage(bytes: BCBuildMessages().getCard())
         } else if ppFunc.contains("GCRR") {
             
         } else if ppFunc.contains("TLI") {
             print("func: \(ppFunc)")
-            sendMessage(message: Data(bytes: BCBuildMessages().loadTableLoadInit(input: "103112201427")))
+            writeMessage(bytes: BCBuildMessages().loadTableLoadInit(input: "103112201427"))
             
         } else if ppFunc.contains("TLR") {
             print("func: \(ppFunc)")
-            
-            sendMessage(message: Data(bytes: BCBuildMessages().loadTableLoadRec(table: "0328410107A00000000410100000000000000000000201MASTERCARD ••••••030082008200820769862MERCH00000000011234TERM0001E0F0C06000B0F 00021C8000000000000000000C800000000•••••••••••••••••••••••••••••••• ••••••••••••••••••••••••••••••••••••••••••••••••9F02069F03069F1A029 5055F2A029A039C010000Y1Z1Y3Z306210202101000000000000000000000000000 000302VISA•ELECTRON•••041091030652005060708000000000000000000000030 3VISA•CASH•••••••010000050000000000000000000015210198607612,.R$••1")))
+
+            writeMessage(bytes: BCBuildMessages().loadTableLoadRec(table: "0328410107A00000000410100000000000000000000201MASTERCARD ••••••030082008200820769862MERCH00000000011234TERM0001E0F0C06000B0F 00021C8000000000000000000C800000000•••••••••••••••••••••••••••••••• ••••••••••••••••••••••••••••••••••••••••••••••••9F02069F03069F1A029 5055F2A029A039C010000Y1Z1Y3Z306210202101000000000000000000000000000 000302VISA•ELECTRON•••041091030652005060708000000000000000000000030 3VISA•CASH•••••••010000050000000000000000000015210198607612,.R$••1"))
+
             
         } else if ppFunc.contains("TLE") {
             print("func: \(ppFunc)")
-            sendMessage(message: Data(bytes: BCBuildMessages().loadTableLoadEnd()))
+
+            writeMessage(bytes: BCBuildMessages().loadTableLoadEnd())
             
         }  else if ppFunc.contains("GTS") {
             print("func: \(ppFunc)")
             
             let mMsg = String(format: "%03d", ppFuncTextFiled.text!)
-           
-            sendMessage(message: Data(bytes: BCBuildMessages().getTimeStampt(input:"00")))
+           writeMessage(bytes: BCBuildMessages().getTimeStampt(input:"00"))
             
         } else if ppFunc.contains("GOCS") {
             print("func: \(ppFunc)")
@@ -368,30 +386,51 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
             let input = "000000000500000000000000010301                                100000FA010000003E899000"
             let tags = "023829F279F269F36959F349F379F335F289F109A5F349F0B"
             let tagsOpt = "000"
-            
-            sendMessage(message: Data(bytes: BCBuildMessages().startGoOnChip(input: input, tags: tags, tagsOpt: tagsOpt)))
+
+            writeMessage(bytes: BCBuildMessages().startGoOnChip(input: input, tags: tags, tagsOpt: tagsOpt))
 
             
         } else if ppFunc.contains("GOC") {
             print("func: \(ppFunc)")
-            
-            
-            let m: [UInt8] = [0x16, 0x47, 0x4F, 0x43, 0x30, 0x38, 0x36, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x34, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x31, 0x30, 0x30, 0x33, 0x30, 0x31, 0x41, 0x36, 0x34, 0x44, 0x34, 0x38, 0x34, 0x31, 0x33, 0x30, 0x42, 0x38, 0x44, 0x31, 0x33, 0x42, 0x33, 0x41, 0x30, 0x36, 0x36, 0x34, 0x37, 0x41, 0x32, 0x31, 0x37, 0x43, 0x46, 0x46, 0x31, 0x37, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x38, 0x35, 0x30]
-            
-            let m2: [UInt8] = [ 0x15, 0x34, 0x31, 0x38, 0x32, 0x38, 0x34, 0x39, 0x31, 0x39, 0x35, 0x35, 0x46, 0x32, 0x41, 0x35, 0x46, 0x33, 0x34, 0x39, 0x41, 0x39, 0x43, 0x39, 0x46, 0x30, 0x32, 0x39, 0x46, 0x30, 0x33, 0x39, 0x46, 0x30, 0x39, 0x39, 0x46, 0x31, 0x30, 0x39, 0x46, 0x31, 0x41, 0x39, 0x46, 0x31, 0x45, 0x39, 0x46, 0x32, 0x36, 0x39, 0x46, 0x32, 0x37, 0x39, 0x46, 0x33, 0x33, 0x39, 0x46, 0x33, 0x34, 0x39, 0x46, 0x33, 0x35, 0x39, 0x46, 0x33, 0x36, 0x39, 0x46, 0x33, 0x37, 0x39, 0x46, 0x34, 0x31, 0x39, 0x42, 0x39, 0x46, 0x36, 0x45, 0x30, 0x30, 0x33, 0x30, 0x30, 0x30, 0x17, 0x23, 0x75]
-            
 
-            //sendMessage(message: Data(bytes: m))
-            
-            sendMessage(message: Data(bytes: BCBuildMessages().goOnChip(input: "086000000000500000000000000010301                                100000FA010000003E899000049023829F279F269F36959F349F379F335F289F109A5F349F0B003000")))
-            
-   
-            
-            // funciona : 086000000000500000000000000010301                                100000FA010000003E899000049023829F279F269F36959F349F379F335F289F109A5F349F0B003000
-            
-            //086000000002000000000000000100301A64D484130B8D13B3A06647A217CFF17000000000000000000000000085041828491955F2A5F349A9C9F029F039F099F109F1A9F1E9F269F279F339F349F359F369F379F419B9F6E003000
+            writeMessage(bytes: BCBuildMessages().goOnChip(input: "086000000000500000000000000010301                                100000FA010000003E899000049023829F279F269F36959F349F379F335F289F109A5F349F0B003000"))
+
         }
 
+    }
+
+    func writeMessage(bytes: [UInt8]) {
+
+        var buffer = bytes
+
+        let commandLength = buffer.count
+        let dataToSend = NSData(bytes: &buffer, length: commandLength + 1)
+        var sendDataIndex: Int = 0
+
+
+        print("\(String(data: dataToSend as Data, encoding: .utf8) ?? "")")
+        var didSend = true
+
+        while didSend {
+            // minus 1 to avoid exceeding the maximum value
+            let mtu: Int = scale.maximumWriteValueLength(for: .withoutResponse) - 1
+            var amountToSend: Int = dataToSend.length - sendDataIndex
+
+            if amountToSend > mtu {
+                amountToSend = mtu
+            } else {
+                didSend = false
+            }
+
+            let chunk = Data(bytes: (dataToSend.bytes + sendDataIndex), count: amountToSend)
+
+            scale.writeValue(chunk, for: characteristic!, type: .withResponse)
+
+            let stringFromData = String(data: chunk, encoding: .utf8)
+            print("Sent: \(stringFromData ?? "")")
+
+            sendDataIndex += amountToSend
+        }
     }
 }
 
