@@ -30,7 +30,7 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
     var callbackStatus = StatusDeviceMessage.beginning
     
     
-    var items: [ItemCollection] = [ItemCollection(ppfunc: "OPN", color: UIColor(named: "open")! ), ItemCollection(ppfunc: "READ", color: UIColor(named: "read")!), ItemCollection(ppfunc: "CLO", color: UIColor(named: "close")!), ItemCollection(ppfunc: "GIN", color: UIColor(named: "open")!), ItemCollection(ppfunc: "SGC", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GCR", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GCRR", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "TLI", color: UIColor(named: "tableIniti")!), ItemCollection(ppfunc: "TLR", color: UIColor(named: "tableRec")!), ItemCollection(ppfunc: "TLE", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GTS", color: UIColor(named: "open")!), ItemCollection(ppfunc: "GOCS", color: UIColor(named: "read")!), ItemCollection(ppfunc: "GOC", color: UIColor(named: "read")!)]
+    var items: [ItemCollection] = [ItemCollection(ppfunc: "OPN", color: UIColor(named: "open")! ), ItemCollection(ppfunc: "READ", color: UIColor(named: "read")!), ItemCollection(ppfunc: "CLO", color: UIColor(named: "close")!), ItemCollection(ppfunc: "GIN", color: UIColor(named: "open")!), ItemCollection(ppfunc: "SGC", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GCR", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GCRR", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "TLI", color: UIColor(named: "tableIniti")!), ItemCollection(ppfunc: "TLR", color: UIColor(named: "tableRec")!), ItemCollection(ppfunc: "TLE", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GTS", color: UIColor(named: "open")!), ItemCollection(ppfunc: "GOCS", color: UIColor(named: "read")!), ItemCollection(ppfunc: "GOC", color: UIColor(named: "read")!), ItemCollection(ppfunc: "FNC", color: UIColor(named: "read")!)]
 
     
 
@@ -201,6 +201,7 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
         
         if let data = characteristic.value {
 
+            print(String(data: data, encoding: .ascii))
             BCBuildMessages().readMessage(data: data) { (response)  in
 
                 switch response.statusMessage {
@@ -212,15 +213,15 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
                     print("end")
                     print(response.message)
                 }
-                
+
                 switch response.function {
                 case .getInfo: do {
                     let getInfo = ReadBCMessages().getInfoPinpad(msg: response.message)
                 }
                 default: print("Default")
-                    
+
                 }
-                
+
 
                 self.text.text = " Func:  \(response.function.rawValue), \n msg: \(response.message)"
             }
@@ -359,7 +360,7 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
         } else if ppFunc.contains("SGC") {
             print("func: \(ppFunc)")
 
-            writeMessage(bytes: BCBuildMessages().startGetCard())
+            writeMessage(bytes: BCBuildMessages().startGetCard(input: "100000000000200019021220220531122014270510011003100510061007"))
             
         } else if ppFunc.contains("GCR") {
             print("func: \(ppFunc)")
@@ -373,7 +374,10 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
         } else if ppFunc.contains("TLR") {
             print("func: \(ppFunc)")
 
-            writeMessage(bytes: BCBuildMessages().loadTableLoadRec(table: "0328410107A00000000410100000000000000000000201MASTERCARD ••••••030082008200820769862MERCH00000000011234TERM0001E0F0C06000B0F 00021C8000000000000000000C800000000•••••••••••••••••••••••••••••••• ••••••••••••••••••••••••••••••••••••••••••••••••9F02069F03069F1A029 5055F2A029A039C010000Y1Z1Y3Z306210202101000000000000000000000000000 000302VISA•ELECTRON•••041091030652005060708000000000000000000000030 3VISA•CASH•••••••010000050000000000000000000015210198607612,.R$••1"))
+            DataManagerDefault().tables.forEach { (table) in
+                writeMessage(bytes: BCBuildMessages().loadTableLoadRec(table: table))
+            }
+            //writeMessage(bytes: BCBuildMessages().loadTableLoadRec(table: "0328410107A00000000410100000000000000000000201MASTERCARD ••••••030082008200820769862MERCH00000000011234TERM0001E0F0C06000B0F 00021C8000000000000000000C800000000•••••••••••••••••••••••••••••••• ••••••••••••••••••••••••••••••••••••••••••••••••9F02069F03069F1A029 5055F2A029A039C010000Y1Z1Y3Z306210202101000000000000000000000000000 000302VISA•ELECTRON•••041091030652005060708000000000000000000000030 3VISA•CASH•••••••010000050000000000000000000015210198607612,.R$••1"))
 
             
         } else if ppFunc.contains("TLE") {
@@ -402,6 +406,8 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
 
             writeMessage(bytes: BCBuildMessages().goOnChip(input: "086000000000500000000000000010301                                100000FA010000003E899000049023829F279F269F36959F349F379F335F289F109A5F349F0B003000"))
 
+        } else if ppFunc.contains("FNC") {
+            writeMessage(bytes: BCBuildMessages().finishChip(input: "0000000000", inputTags: "0569F029F039F1A955F2A9A9C9F379F359F279F26829F369F109F345F349F339F1E9F099F419F069F0D9F0E9F0F9F429F3B5F285F555F569F07"))
         }
 
     }

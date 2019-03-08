@@ -20,7 +20,7 @@ enum PinpadCommands: String {
     case tableLoadInit  = "TLI"
     case tableLoadRec   = "TLR"
     case tableLoadEnd   = "TLE"
-    case finishChip     = "FNS"
+    case finishChip     = "FNC"
     case nak            = "NAK"
     case error
 
@@ -44,12 +44,13 @@ enum ResponseCodeBC: String{
     case pp_ok          = "000"
     case pp_processing  = "001"
     case pp_notify      = "002"
-    
+    case pp_cancel      = "013"
+
     static func getFromString(code: String?) -> ResponseCodeBC {
         if let code = code, let responseCode = ResponseCodeBC.init(rawValue: code) {
             return responseCode
         } else {
-            return self.pp_ok
+            return self.pp_cancel
         }
     }
 }
@@ -140,8 +141,6 @@ struct BCBuildMessages {
         let msgToCRC = CalculoCRC().prepareDataToCRC(ppFunc: inputMSG)
         let getCRC = CalculoCRC().crcXModem(bytes: msgToCRC)
         let msgInitTable = creatPINPADMSG(data: inputMSG, crc: getCRC)
-        
-        print(String(bytes: msgInitTable, encoding: .ascii))
 
         return msgInitTable
     }
@@ -153,8 +152,8 @@ struct BCBuildMessages {
 
         //append ETB on message
         let msgToCRC = CalculoCRC().prepareDataToCRC(ppFunc: inputMSG)
-        
         let getCRC = CalculoCRC().crcXModem(bytes: msgToCRC)
+        
         return creatPINPADMSG(data: inputMSG, crc: getCRC)
     }
     
@@ -168,22 +167,16 @@ struct BCBuildMessages {
         return creatPINPADMSG(data: PinpadCommands.tableLoadEnd.rawValue, crc: getCRC)
     }
     
-    func startGetCard() -> [UInt8] {
-        let input = "100000000000200019021220220531122014270510011003100510061007"
+    func startGetCard(input: String) -> [UInt8] {
         
         let sizeMsg = String(format: "%03d", input.count)
-        
         let msgGetCard = "\(PinpadCommands.getCard.rawValue)\(sizeMsg)\(input)"
         
-        //todo: passar msgToCRC no createPINPADMSG
         let msgToCRC = CalculoCRC().prepareDataToCRC(ppFunc: msgGetCard)
         let getCRC = CalculoCRC().crcXModem(bytes: msgToCRC)
         let msgStartGetCard = creatPINPADMSG(data: msgGetCard, crc: getCRC)
         
-        let m: [UInt8] = [0x16, 0x47, 0x43, 0x52, 0x30, 0x36, 0x30, 0x31, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x34, 0x30, 0x30, 0x30, 0x31, 0x39, 0x30, 0x32, 0x31, 0x34, 0x32, 0x30, 0x32, 0x38, 0x35, 0x34, 0x33, 0x31, 0x31, 0x32, 0x32, 0x30, 0x31, 0x34, 0x32, 0x37, 0x30, 0x35, 0x31, 0x30, 0x30, 0x31, 0x31, 0x30, 0x30, 0x33, 0x31, 0x30, 0x30, 0x35, 0x31, 0x30, 0x30, 0x36, 0x31, 0x30, 0x30, 0x37, 0x17, 0x05, 0x40]
-        //return msgStartGetCard
-        
-        return m
+        return msgStartGetCard
     }
     
     func getCard() -> [UInt8] {
@@ -206,7 +199,7 @@ struct BCBuildMessages {
         
         let msgToCRC = CalculoCRC().prepareDataToCRC(ppFunc: inputMSG)
         let getCRC = CalculoCRC().crcXModem(bytes: msgToCRC)
-        print(getCRC)
+        
         let msgGoOnChip = creatPINPADMSG(data: inputMSG, crc: getCRC)
         
         return msgGoOnChip
@@ -222,8 +215,6 @@ struct BCBuildMessages {
         let getCRC = CalculoCRC().crcXModem(bytes: msgToCRC)
         let msgStartGoOnChip = creatPINPADMSG(data: msgGoOnChip, crc: getCRC)
     
-        print(String(bytes: msgStartGoOnChip, encoding: .ascii))
-    
         return msgStartGoOnChip
     }
     
@@ -238,13 +229,27 @@ struct BCBuildMessages {
         
         return msgStartGetCard
     }
-
+    
+    func finishChip(input: String, inputTags: String) -> [UInt8] {
+        
+        let inputSize = String(format: "%03d", input.count)
+        let tagsSize = String(format: "%03d", inputTags.count)
+        
+        let inputMSG = "\(PinpadCommands.finishChip.rawValue)\(inputSize)\(input)\(tagsSize)\(inputTags)"
+        
+        let msgToCRC = CalculoCRC().prepareDataToCRC(ppFunc: inputMSG)
+        let getCRC = CalculoCRC().crcXModem(bytes: msgToCRC)
+    
+        let msgFinishiChip = creatPINPADMSG(data: inputMSG, crc: getCRC)
+        
+        return msgFinishiChip
+    }
 
     func readMessage(data: Data, completionHandler: @escaping (ResponseBC) -> Void) {
 
         var bytes = [UInt8](data)
         let nak: UInt8 = 0x15
-
+        
         var firstByte = bytes[0]
         var function = [UInt8]()
 
@@ -302,11 +307,79 @@ struct BCBuildMessages {
 
         let lastByte = bytes.last!
 
-        var responseCode = [UInt8]()
-        responseCode.append(bytes[0])
-        responseCode.append(bytes[1])
-        responseCode.append(bytes[2])
+        var responseCodeByte = [UInt8]()
+        responseCodeByte.append(bytes[0])
+        responseCodeByte.append(bytes[1])
+        responseCodeByte.append(bytes[2])
         
+        let codeStr = String(bytes: responseCodeByte, encoding: .ascii)
+        
+        let responseCode = ResponseCodeBC.getFromString(code: codeStr)
+        
+        switch responseCode {
+        case .pp_ok: print("OK")
+        default: do {
+            print(codeStr)
+            let message = String(bytes: bytes, encoding: .ascii)!
+            let response = ResponseBC(resposeCode: .pp_ok, function: .close, statusMessage: .end, sizeMessage: "000", message: message)
+            completionHandler(response)
+            return
+        }
+            
+        }
+        
+        let code =  responseCode
+        let bcCommnad = getBCFunction(function: Data(function))
+        
+        switch bcCommnad {
+        case .close: do {
+                let message = String(bytes: bytes, encoding: .ascii)!
+                let response = ResponseBC(resposeCode: .pp_ok, function: .close, statusMessage: .end, sizeMessage: "000", message: message)
+                completionHandler(response)
+                return
+            }
+        case .open: do {
+            let message = String(bytes: bytes, encoding: .ascii)!
+            let response = ResponseBC(resposeCode: .pp_ok, function: .open, statusMessage: .end, sizeMessage: "000", message: message)
+            completionHandler(response)
+            return
+            }
+        case .error: do {
+            let message = String(bytes: bytes, encoding: .ascii)!
+            let response = ResponseBC(resposeCode: .pp_ok, function: .close, statusMessage: .end, sizeMessage: "000", message: message)
+            completionHandler(response)
+            return
+            }
+        case .display: do {
+            let message = String(bytes: bytes, encoding: .ascii)!
+            let response = ResponseBC(resposeCode: .pp_ok, function: .display, statusMessage: .end, sizeMessage: "000", message: message)
+            completionHandler(response)
+            return
+            }
+            
+        case .tableLoadRec: do {
+                let message = String(bytes: bytes, encoding: .ascii)!
+                let response = ResponseBC(resposeCode: .pp_ok, function: .tableLoadRec, statusMessage: .end, sizeMessage: "000", message: message)
+                completionHandler(response)
+                return
+            }
+            
+        case .tableLoadInit: do {
+            let message = String(bytes: bytes, encoding: .ascii)!
+            let response = ResponseBC(resposeCode: .pp_ok, function: .tableLoadRec, statusMessage: .end, sizeMessage: "000", message: message)
+            completionHandler(response)
+            return
+            }
+        case .tableLoadEnd: do {
+            let message = String(bytes: bytes, encoding: .ascii)!
+            let response = ResponseBC(resposeCode: .pp_ok, function: .tableLoadRec, statusMessage: .end, sizeMessage: "000", message: message)
+            completionHandler(response)
+            return
+            }
+        default:
+            print("defaul")
+        }
+
         //remove responseCode
         bytes.removeFirst(3)
         
@@ -318,8 +391,7 @@ struct BCBuildMessages {
         //remove inputSize
         bytes.removeFirst(3)
         
-        let code = getResponseCodeBC(buffer: responseCode)
-        let bcCommnad = getBCFunction(function: Data(function))
+       
         let size = String(bytes: inputSize, encoding: .ascii)!
         
         if lastByte == 23 {
