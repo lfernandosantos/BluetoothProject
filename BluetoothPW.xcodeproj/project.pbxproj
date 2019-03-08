@@ -16,6 +16,7 @@
 		EDAF8D7B2211E17C00F981AD /* CalculoCRC.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDAF8D7A2211E17C00F981AD /* CalculoCRC.swift */; };
 		EDAF8D7D221332F000F981AD /* CollectionFuncs.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDAF8D7C221332F000F981AD /* CollectionFuncs.swift */; };
 		EDAF8D7F2214B9C300F981AD /* DataManagerDefault.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDAF8D7E2214B9C300F981AD /* DataManagerDefault.swift */; };
+		EDE3205B2231852F009E2CA4 /* GetInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDE3205A2231852F009E2CA4 /* GetInfo.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +31,7 @@
 		EDAF8D7A2211E17C00F981AD /* CalculoCRC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculoCRC.swift; sourceTree = "<group>"; };
 		EDAF8D7C221332F000F981AD /* CollectionFuncs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionFuncs.swift; sourceTree = "<group>"; };
 		EDAF8D7E2214B9C300F981AD /* DataManagerDefault.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataManagerDefault.swift; sourceTree = "<group>"; };
+		EDE3205A2231852F009E2CA4 /* GetInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetInfo.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -62,6 +64,7 @@
 		BE37B8D721CEC63600370338 /* BluetoothPW */ = {
 			isa = PBXGroup;
 			children = (
+				EDE32059223184B4009E2CA4 /* model */,
 				BE37B8D821CEC63600370338 /* AppDelegate.swift */,
 				BE37B8DA21CEC63600370338 /* ViewController.swift */,
 				BE37B8DC21CEC63600370338 /* Main.storyboard */,
@@ -74,6 +77,14 @@
 				EDAF8D7E2214B9C300F981AD /* DataManagerDefault.swift */,
 			);
 			path = BluetoothPW;
+			sourceTree = "<group>";
+		};
+		EDE32059223184B4009E2CA4 /* model */ = {
+			isa = PBXGroup;
+			children = (
+				EDE3205A2231852F009E2CA4 /* GetInfo.swift */,
+			);
+			path = model;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -150,6 +161,7 @@
 				BE37B8DB21CEC63600370338 /* ViewController.swift in Sources */,
 				EDAF8D7F2214B9C300F981AD /* DataManagerDefault.swift in Sources */,
 				EDAF8D792211E13A00F981AD /* BCBuildMessages.swift in Sources */,
+				EDE3205B2231852F009E2CA4 /* GetInfo.swift in Sources */,
 				EDAF8D7D221332F000F981AD /* CollectionFuncs.swift in Sources */,
 				EDAF8D7B2211E17C00F981AD /* CalculoCRC.swift in Sources */,
 				BE37B8D921CEC63600370338 /* AppDelegate.swift in Sources */,

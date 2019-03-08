@@ -34,12 +34,25 @@ enum PinpadCommands: String {
 }
 
 
-enum CallbackMessageStatus {
+enum StatusDeviceMessage {
     case beginning
     case middle
     case end
 }
 
+enum ResponseCodeBC: String{
+    case pp_ok          = "000"
+    case pp_processing  = "001"
+    case pp_notify      = "002"
+    
+    static func getFromString(code: String?) -> ResponseCodeBC {
+        if let code = code, let responseCode = ResponseCodeBC.init(rawValue: code) {
+            return responseCode
+        } else {
+            return self.pp_ok
+        }
+    }
+}
 
 struct BCBuildMessages {
 
@@ -226,7 +239,8 @@ struct BCBuildMessages {
         return msgStartGetCard
     }
 
-    func readMessage(data: Data, completionHandler: @escaping (CallbackMessageStatus, PinpadCommands, Data) -> Void) {
+
+    func readMessage(data: Data, completionHandler: @escaping (ResponseBC) -> Void) {
 
         var bytes = [UInt8](data)
         let nak: UInt8 = 0x15
@@ -237,14 +251,21 @@ struct BCBuildMessages {
         let okByte: UInt8 = 0x06
 
         if firstByte == nak {
-            completionHandler(.end, .nak, data)
+            
+            let message = String(data: data, encoding: .ascii)!
+            let response = ResponseBC(resposeCode: .pp_ok, function: .nak, statusMessage: .end, sizeMessage: "000", message: message)
+            completionHandler(response)
+        
             return
         }
 
         if firstByte == okByte {
             if bytes.count == 1 {
                 //todo: send just message without initial and final byte
-                completionHandler(.end, .close, data)
+                
+                let message = String(data: data, encoding: .ascii)!
+                let response = ResponseBC(resposeCode: .pp_ok, function: .close, statusMessage: .end, sizeMessage: "000", message: message)
+                completionHandler(response)
                 return
             }
 
@@ -259,12 +280,14 @@ struct BCBuildMessages {
         } else {
 
             if bytes.count < 2 {
-                completionHandler(.end, .close, Data(bytes))
+                let message = String(bytes: bytes, encoding: .ascii)!
+                let response = ResponseBC(resposeCode: .pp_ok, function: .close, statusMessage: .end, sizeMessage: "000", message: message)
+                completionHandler(response)
                 return
             }
+            function.append(bytes[0])
             function.append(bytes[1])
             function.append(bytes[2])
-            function.append(bytes[3])
 
             bytes.removeFirst(4)
         }
@@ -279,22 +302,40 @@ struct BCBuildMessages {
 
         let lastByte = bytes.last!
 
-
-
-        print(lastByte.description)
-        print(lastByte)
-
-
+        var responseCode = [UInt8]()
+        responseCode.append(bytes[0])
+        responseCode.append(bytes[1])
+        responseCode.append(bytes[2])
+        
+        //remove responseCode
+        bytes.removeFirst(3)
+        
+        var inputSize = [UInt8]()
+        inputSize.append(bytes[0])
+        inputSize.append(bytes[1])
+        inputSize.append(bytes[2])
+        
+        //remove inputSize
+        bytes.removeFirst(3)
+        
+        let code = getResponseCodeBC(buffer: responseCode)
+        let bcCommnad = getBCFunction(function: Data(function))
+        let size = String(bytes: inputSize, encoding: .ascii)!
+        
         if lastByte == 23 {
-            //todo: send just message without initial and final byte
+            
             //remove last position
-
             bytes.removeLast()
-            completionHandler(.end, getBCFunction(function: Data(function)), Data(bytes))
+            
+            let message = String(bytes: bytes, encoding: .ascii)!
+            let response = ResponseBC(resposeCode: code, function: bcCommnad, statusMessage: .end, sizeMessage: size, message: message)
+            completionHandler(response)
             return
         } else {
-            //todo: send just message without initial and final byte
-            completionHandler(.middle, getBCFunction(function: Data(function)), Data(bytes))
+            
+            let message = String(bytes: bytes, encoding: .ascii)!
+            let response = ResponseBC(resposeCode: code, function: bcCommnad, statusMessage: .middle, sizeMessage: size, message: message)
+            completionHandler(response)
         }
     }
 
@@ -302,4 +343,80 @@ struct BCBuildMessages {
         let strFunc = String(data: function, encoding: .ascii)
         return PinpadCommands.getFromString(function: strFunc)
     }
+    
+    func getResponseCodeBC(buffer: [UInt8]) -> ResponseCodeBC {
+        let str = String(bytes: buffer, encoding: .ascii)
+        return ResponseCodeBC.getFromString(code: str)
+    }
+}
+
+
+struct ReadBCMessages {
+    func getInfoPinpad(msg: String) -> GetInfo {
+        
+        if msg.count == 100 {
+            return getInfoGeneral(input: msg)
+        } else {
+            return getInfoAcquirer(input: msg)
+        }
+    }
+    
+    func getInfoGeneral(input: String) -> GetInfoGeneral{
+        let manufactor = input.substring(fromIndex: 0, toIndex: 20)
+        let model = input.substring(fromIndex: 21, toIndex: 39)
+        
+        var contactless: Bool {
+            if input.getChar(at: 39).elementsEqual("C") {
+                return true
+            }
+            return false
+        }
+        
+        let firmwareVersion = input.substring(fromIndex: 40, toIndex: 60)
+        let especification = input.substring(fromIndex: 60, toIndex: 64)
+        let applicationVersion = input.substring(fromIndex: 64, toIndex: 80)
+        let serialNumber = input.substring(fromIndex: 80, toIndex: input.count - 1)
+        
+        return GetInfoGeneral(applicationVersion: applicationVersion, manufacturer: manufactor, model: model, contactlessSupport: contactless, firmwareVersion: firmwareVersion, especificationVersion: especification, serialNumber: serialNumber)
+    }
+    
+    func getInfoAcquirer(input: String) -> GetInfoAcquirer {
+        let acquirer = input.substring(fromIndex: 0, toIndex: 20)
+        let applicationVersion = input.substring(fromIndex: 20, toIndex: 33)
+        let acquirerInfo = input.substring(fromIndex: 33, toIndex: 40)
+        let idSAMSize = input.substring(fromIndex: 40, toIndex: 42)
+        let idSAM = input.substring(fromIndex: 42, toIndex: input.count - 1)
+        return GetInfoAcquirer(applicationVersion: applicationVersion, acquirer: acquirer, acquirerInfo: acquirerInfo, idSAMSize: idSAMSize, idSAM: idSAM)
+        
+    }
+}
+
+
+extension String {
+    
+    func substring(fromIndex: Int, toIndex: Int) -> String {
+        if fromIndex < toIndex && toIndex < self.count {
+            let startIndex = self.index(self.startIndex, offsetBy: fromIndex)
+            let endIndex = self.index(self.startIndex, offsetBy: toIndex)
+            return String(self[startIndex..<endIndex])
+        }else{
+            return ""
+        }
+    }
+    
+    func getChar(at: Int) -> String {
+        let index = self.index(self.startIndex, offsetBy: at)
+        let char = self[index]
+        return String(char)
+    }
+}
+
+
+
+struct ResponseBC {
+    let resposeCode: ResponseCodeBC
+    let function: PinpadCommands
+    let statusMessage: StatusDeviceMessage
+    let sizeMessage: String
+    let message: String
 }

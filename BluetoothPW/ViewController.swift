@@ -27,7 +27,7 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
     var conta = 0
 
     var callbackMessage: [String] = [String]()
-    var callbackStatus = CallbackMessageStatus.beginning
+    var callbackStatus = StatusDeviceMessage.beginning
     
     
     var items: [ItemCollection] = [ItemCollection(ppfunc: "OPN", color: UIColor(named: "open")! ), ItemCollection(ppfunc: "READ", color: UIColor(named: "read")!), ItemCollection(ppfunc: "CLO", color: UIColor(named: "close")!), ItemCollection(ppfunc: "GIN", color: UIColor(named: "open")!), ItemCollection(ppfunc: "SGC", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GCR", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GCRR", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "TLI", color: UIColor(named: "tableIniti")!), ItemCollection(ppfunc: "TLR", color: UIColor(named: "tableRec")!), ItemCollection(ppfunc: "TLE", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GTS", color: UIColor(named: "open")!), ItemCollection(ppfunc: "GOCS", color: UIColor(named: "read")!), ItemCollection(ppfunc: "GOC", color: UIColor(named: "read")!)]
@@ -201,21 +201,28 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
         
         if let data = characteristic.value {
 
-            print(String(data: data, encoding: .ascii))
-            BCBuildMessages().readMessage(data: data) { (status, function, msg) in
+            BCBuildMessages().readMessage(data: data) { (response)  in
 
-                print("function => \(function.rawValue)")
-                switch status {
+                switch response.statusMessage {
                 case .beginning: print("beginning")
                 case .middle:
                     print("middle")
-                    print(String(data: msg, encoding: .ascii))
+                    print(response.message)
                 case .end:
                     print("end")
-                    print(String(data: msg, encoding: .ascii))
+                    print(response.message)
                 }
+                
+                switch response.function {
+                case .getInfo: do {
+                    let getInfo = ReadBCMessages().getInfoPinpad(msg: response.message)
+                }
+                default: print("Default")
+                    
+                }
+                
 
-                self.text.text = " Func:  \(function.rawValue), \n msg: \(String(data: msg, encoding: String.Encoding.ascii)!)"
+                self.text.text = " Func:  \(response.function.rawValue), \n msg: \(response.message)"
             }
 
         }
