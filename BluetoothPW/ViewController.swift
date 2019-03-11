@@ -387,6 +387,33 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
     }
 }
 
+extension ViewController {
+    
+    
+    @objc func recTableOnDevice() {
+        if let firt = valueDataToWrite.first {
+            writeMessage(bytes: BCBuildMessages().loadTableLoadRec(table: firt))
+            valueDataToWrite.removeFirst()
+        } else {
+            self.writeMessage(bytes: BCBuildMessages().loadTableLoadEnd())
+        }
+    }
+    
+    func finishLoadTable() {
+        self.scale.writeValue(Data(bytes: BCBuildMessages().showDisplay(msg: "Tabelas Atualizadas!")), for: self.characteristic!, type: .withResponse)
+    }
+    
+    func getDeviceInfos(info: String) {
+        let getInfo = ReadBCMessages().getInfoPinpad(msg: info)
+        if getInfo.type == .general {
+            let getInfoG = getInfo as! GetInfoGeneral
+            print(String(describing: getInfoG))
+            
+        }
+        
+    }
+}
+
 struct ItemCollection {
     var ppfunc: String
     var color: UIColor
