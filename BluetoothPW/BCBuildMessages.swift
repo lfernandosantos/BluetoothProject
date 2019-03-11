@@ -9,30 +9,6 @@
 import Foundation
 
 
-enum PinpadCommands: String {
-    case open           = "OPN"
-    case getInfo        = "GIN"
-    case display        = "DSP"
-    case close          = "CLO"
-    case getCard        = "GCR"
-    case goOnChip       = "GOC"
-    case getTimeStamp   = "GTS"
-    case tableLoadInit  = "TLI"
-    case tableLoadRec   = "TLR"
-    case tableLoadEnd   = "TLE"
-    case finishChip     = "FNC"
-    case nak            = "NAK"
-    case error
-
-    static func getFromString(function: String?) -> PinpadCommands {
-        if let function = function, let command = PinpadCommands.init(rawValue: function) {
-            return command
-        } else {
-            return self.error
-        }
-    }
-}
-
 
 enum StatusDeviceMessage {
     case beginning
@@ -245,7 +221,7 @@ struct BCBuildMessages {
         return msgFinishiChip
     }
 
-    func readMessage(data: Data, completionHandler: @escaping (ResponseBC) -> Void) {
+    func readMessage(data: Data) -> ResponseBC  {
 
         var bytes = [UInt8](data)
         let nak: UInt8 = 0x15
@@ -255,58 +231,51 @@ struct BCBuildMessages {
 
         let okByte: UInt8 = 0x06
 
-        if firstByte == nak {
-            
-            let message = String(data: data, encoding: .ascii)!
-            let response = ResponseBC(resposeCode: .pp_ok, function: .nak, statusMessage: .end, sizeMessage: "000", message: message)
-            completionHandler(response)
-        
-            return
-        }
-
-        if firstByte == okByte {
-            if bytes.count == 1 {
-                //todo: send just message without initial and final byte
+        if bytes.count < 2 {
+            if firstByte == okByte {
                 
                 let message = String(data: data, encoding: .ascii)!
                 let response = ResponseBC(resposeCode: .pp_ok, function: .close, statusMessage: .end, sizeMessage: "000", message: message)
-                completionHandler(response)
-                return
+                return response
+                
+            }  else {
+                //nak (bit 15)
+                let message = String(data: data, encoding: .ascii)!
+                let response = ResponseBC(resposeCode: .pp_ok, function: .nak, statusMessage: .end, sizeMessage: "000", message: message)
+                return response
             }
+        }
+        
 
+        if firstByte == okByte {
+            
+            //ignore okbyte on first position
             firstByte = bytes[1]
             function.append(bytes[2])
             function.append(bytes[3])
             function.append(bytes[4])
-
+            
             bytes.removeFirst(5)
 
-            print(bytes)
         } else {
-
-            if bytes.count < 2 {
-                let message = String(bytes: bytes, encoding: .ascii)!
-                let response = ResponseBC(resposeCode: .pp_ok, function: .close, statusMessage: .end, sizeMessage: "000", message: message)
-                completionHandler(response)
-                return
-            }
-            function.append(bytes[0])
+            
             function.append(bytes[1])
             function.append(bytes[2])
+            function.append(bytes[3])
 
             bytes.removeFirst(4)
         }
 
-
+        
         var crc = [UInt8]()
         crc.append(bytes[bytes.count - 2])
         crc.append(bytes[bytes.count - 1])
-
+        
         //remove crc from msg
         bytes.removeLast(2)
-
+        
         let lastByte = bytes.last!
-
+        
         var responseCodeByte = [UInt8]()
         responseCodeByte.append(bytes[0])
         responseCodeByte.append(bytes[1])
@@ -319,80 +288,35 @@ struct BCBuildMessages {
         switch responseCode {
         case .pp_ok: print("OK")
         default: do {
-            print(codeStr)
+            
             let message = String(bytes: bytes, encoding: .ascii)!
             let response = ResponseBC(resposeCode: .pp_ok, function: .close, statusMessage: .end, sizeMessage: "000", message: message)
-            completionHandler(response)
-            return
-        }
+            return response
+            
+            }
             
         }
         
         let code =  responseCode
         let bcCommnad = getBCFunction(function: Data(function))
         
-        switch bcCommnad {
-        case .close: do {
-                let message = String(bytes: bytes, encoding: .ascii)!
-                let response = ResponseBC(resposeCode: .pp_ok, function: .close, statusMessage: .end, sizeMessage: "000", message: message)
-                completionHandler(response)
-                return
-            }
-        case .open: do {
-            let message = String(bytes: bytes, encoding: .ascii)!
-            let response = ResponseBC(resposeCode: .pp_ok, function: .open, statusMessage: .end, sizeMessage: "000", message: message)
-            completionHandler(response)
-            return
-            }
-        case .error: do {
-            let message = String(bytes: bytes, encoding: .ascii)!
-            let response = ResponseBC(resposeCode: .pp_ok, function: .close, statusMessage: .end, sizeMessage: "000", message: message)
-            completionHandler(response)
-            return
-            }
-        case .display: do {
-            let message = String(bytes: bytes, encoding: .ascii)!
-            let response = ResponseBC(resposeCode: .pp_ok, function: .display, statusMessage: .end, sizeMessage: "000", message: message)
-            completionHandler(response)
-            return
-            }
-            
-        case .tableLoadRec: do {
-                let message = String(bytes: bytes, encoding: .ascii)!
-                let response = ResponseBC(resposeCode: .pp_ok, function: .tableLoadRec, statusMessage: .end, sizeMessage: "000", message: message)
-                completionHandler(response)
-                return
-            }
-            
-        case .tableLoadInit: do {
-            let message = String(bytes: bytes, encoding: .ascii)!
-            let response = ResponseBC(resposeCode: .pp_ok, function: .tableLoadRec, statusMessage: .end, sizeMessage: "000", message: message)
-            completionHandler(response)
-            return
-            }
-        case .tableLoadEnd: do {
-            let message = String(bytes: bytes, encoding: .ascii)!
-            let response = ResponseBC(resposeCode: .pp_ok, function: .tableLoadRec, statusMessage: .end, sizeMessage: "000", message: message)
-            completionHandler(response)
-            return
-            }
-        default:
-            print("defaul")
-        }
-
         //remove responseCode
         bytes.removeFirst(3)
         
-        var inputSize = [UInt8]()
-        inputSize.append(bytes[0])
-        inputSize.append(bytes[1])
-        inputSize.append(bytes[2])
+        var size = "000"
         
-        //remove inputSize
-        bytes.removeFirst(3)
+        if bytes.count > 3 {
+            var inputSize = [UInt8]()
+            inputSize.append(bytes[0])
+            inputSize.append(bytes[1])
+            inputSize.append(bytes[2])
+            
+            //remove inputSize
+            bytes.removeFirst(3)
+            
+            size  = String(bytes: inputSize, encoding: .ascii)!
+        }
         
-       
-        let size = String(bytes: inputSize, encoding: .ascii)!
         
         if lastByte == 23 {
             
@@ -401,14 +325,14 @@ struct BCBuildMessages {
             
             let message = String(bytes: bytes, encoding: .ascii)!
             let response = ResponseBC(resposeCode: code, function: bcCommnad, statusMessage: .end, sizeMessage: size, message: message)
-            completionHandler(response)
-            return
+            return response
         } else {
             
             let message = String(bytes: bytes, encoding: .ascii)!
             let response = ResponseBC(resposeCode: code, function: bcCommnad, statusMessage: .middle, sizeMessage: size, message: message)
-            completionHandler(response)
+            return response
         }
+        
     }
 
     func getBCFunction(function: Data) -> PinpadCommands {
@@ -462,27 +386,6 @@ struct ReadBCMessages {
         
     }
 }
-
-
-extension String {
-    
-    func substring(fromIndex: Int, toIndex: Int) -> String {
-        if fromIndex < toIndex && toIndex < self.count {
-            let startIndex = self.index(self.startIndex, offsetBy: fromIndex)
-            let endIndex = self.index(self.startIndex, offsetBy: toIndex)
-            return String(self[startIndex..<endIndex])
-        }else{
-            return ""
-        }
-    }
-    
-    func getChar(at: Int) -> String {
-        let index = self.index(self.startIndex, offsetBy: at)
-        let char = self[index]
-        return String(char)
-    }
-}
-
 
 
 struct ResponseBC {

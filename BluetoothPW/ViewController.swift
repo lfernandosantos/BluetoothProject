@@ -22,7 +22,6 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
     var charList: [CBCharacteristic]?
     var canRec = 0
     var canWrite = true
-    var dataToWrite = [Data]()
     var sizeWrite = 0
     var conta = 0
 
@@ -30,7 +29,9 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
     var callbackStatus = StatusDeviceMessage.beginning
     
     
-    var items: [ItemCollection] = [ItemCollection(ppfunc: "OPN", color: UIColor(named: "open")! ), ItemCollection(ppfunc: "READ", color: UIColor(named: "read")!), ItemCollection(ppfunc: "CLO", color: UIColor(named: "close")!), ItemCollection(ppfunc: "GIN", color: UIColor(named: "open")!), ItemCollection(ppfunc: "SGC", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GCR", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GCRR", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "TLI", color: UIColor(named: "tableIniti")!), ItemCollection(ppfunc: "TLR", color: UIColor(named: "tableRec")!), ItemCollection(ppfunc: "TLE", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GTS", color: UIColor(named: "open")!), ItemCollection(ppfunc: "GOCS", color: UIColor(named: "read")!), ItemCollection(ppfunc: "GOC", color: UIColor(named: "read")!), ItemCollection(ppfunc: "FNC", color: UIColor(named: "read")!)]
+    var valueDataToWrite: [String] = [String]()
+    
+    var items: [ItemCollection] = [ItemCollection(ppfunc: "OPN", color: UIColor(named: "open")! ), ItemCollection(ppfunc: "READ", color: UIColor(named: "read")!), ItemCollection(ppfunc: "CLO", color: UIColor(named: "close")!), ItemCollection(ppfunc: "GIN", color: UIColor(named: "open")!), ItemCollection(ppfunc: "SGC", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GCR", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "GCRR", color: UIColor(named: "tableEnd")!), ItemCollection(ppfunc: "TLI", color: UIColor(named: "tableIniti")!), ItemCollection(ppfunc: "GTS", color: UIColor(named: "open")!), ItemCollection(ppfunc: "GOCS", color: UIColor(named: "read")!), ItemCollection(ppfunc: "GOC", color: UIColor(named: "read")!), ItemCollection(ppfunc: "FNC", color: UIColor(named: "read")!)]
 
     
 
@@ -39,6 +40,8 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
     @IBOutlet weak var readBtn: UIButton!
     @IBOutlet weak var ppFuncTextFiled: UITextField!
     @IBOutlet weak var text: UITextView!
+    
+    var pinpad: PinPad?
     
 
     override func viewDidLoad() {
@@ -67,71 +70,8 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
         }
         
     }
+
     
-    func sendMore(_ data: Data ){
-        print("data total")
-        print(String(data: data, encoding: .ascii))
-        var dataMSG = data
-            while dataMSG.count > 40 {
-                var d: Data = Data()
-                print(dataMSG.count)
-                if dataMSG.first! == 0x16 {
-                    print("primeiro dado")
-                } else {
-                    print("add byte 15")
-                    print(dataMSG)
-                    d.append(0x15)
-                    //d.append(Data("GOC".utf8))
-                    d.append(contentsOf: dataMSG)
-                    
-                    dataMSG = d
-                    //dataMSG.insert(0x15, at: 0)
-                    print(dataMSG)
-                }
-                var partData = self.extract(from: &dataMSG)
-                
-                partData?.append(0x15)
-                dataToWrite.append(partData!)
-                
-                print(partData)
-            
-                //self.scale.writeValue(partData!, for: self.characteristic!, type: .withResponse)
-            
-        }
-        
-        if dataMSG.count > 0 {
-            dataToWrite.append(dataMSG)
-        }
-        
-        
-    }
-
-    func sendMessage(message : Data){
-             scale.writeValue(message, for: characteristic!, type: .withResponse)
-        
-    }
-
-    func extract(from data: inout Data) -> Data? {
-        guard data.count > 0 else {
-            return nil
-        }
-        
-        // Define the length of data to return
-        let length = Int.init(data[10])
-        
-        // Create a range based on the length of data to return
-        
-        let range = Range(0..<40)
-        
-        // Get a new copy of data
-        let subData = data.subdata(in: range)
-        
-        // Mutate data
-        data.removeSubrange(range)
-        
-        // Return the new copy of data
-        return subData
-    }
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         print("state: \(central.state)")
         if central.state == .poweredOn {
@@ -154,6 +94,7 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
         if peripheral.identifier.uuidString == /*"BC09EFF0-F1F6-418C-62CA-E3EEEA425610" */ "F4A4339D-AF47-55D0-FE6F-B75ADCDD3C07" {
             centralManager.stopScan()
             scale = peripheral
+            pinpad = PinPad(device: peripheral)
             centralManager.connect(peripheral, options: nil)
         }
     }
@@ -190,6 +131,23 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
 
     }
 
+    func checkResponse(response: ResponseBC) {
+        
+        switch response.function {
+        case .tableLoadInit:
+            self.recTableOnDevice()
+        case .tableLoadRec:
+            self.recTableOnDevice()
+        case .tableLoadEnd:
+            self.finishLoadTable()
+        case .getInfo:
+            self.getDeviceInfos(info: response.message)
+        default:
+            print("without continuation.")
+        }
+        
+    }
+    
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         print("didUpdateValueFor")
         
@@ -198,37 +156,38 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
             print(error)
         }
         
-        
         if let data = characteristic.value {
 
             print(String(data: data, encoding: .ascii))
-            BCBuildMessages().readMessage(data: data) { (response)  in
-
-                switch response.statusMessage {
-                case .beginning: print("beginning")
-                case .middle:
-                    print("middle")
-                    print(response.message)
-                case .end:
-                    print("end")
-                    print(response.message)
+            
+            let response = BCBuildMessages().readMessage(data: data)
+            
+            switch response.resposeCode {
+            case .pp_ok:
+                do {
+                    switch response.statusMessage {
+                    case .beginning: print("beginning")
+                    case .middle:
+                        print("middle")
+                        print(response.message)
+                    case .end: do {
+                        print("end")
+                        print(response.message)
+                        checkResponse(response: response)
+                        }
+                    }
                 }
-
-                switch response.function {
-                case .getInfo: do {
-                    let getInfo = ReadBCMessages().getInfoPinpad(msg: response.message)
-                }
-                default: print("Default")
-
-                }
-
-
-                self.text.text = " Func:  \(response.function.rawValue), \n msg: \(response.message)"
+            default:
+                print("Error to send data commnad: \(response.function.rawValue) code: \(response.resposeCode.rawValue)")
             }
+        
+            self.text.text = " Func:  \(response.function.rawValue), \n msg: \(response.message)"
 
         }
     }
     
+    
+   
 
     func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
         print("didUpdateNotificationStateFor")
@@ -240,20 +199,14 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
     
         if let data = characteristic.value {
             
-            let dataSTR = String(data: data, encoding: String.Encoding.utf8)
-            print("data STR: ")
-            print(dataSTR)
-            print("------")
             print(String(data: data, encoding: String.Encoding.ascii))
             print("bytes in str: ")
             
             let weigth: UInt8 = data.withUnsafeBytes{ $0.pointee}
             
             
-            text.text = " utf8:  \(dataSTR), \n ascii: \(String(data: data, encoding: String.Encoding.ascii)) \n charc: \(characteristic) "
+            text.text = " ascii: \(String(data: data, encoding: String.Encoding.ascii)) \n charc: \(characteristic) "
         }
-
-
 
         if let er = error {
             text.text = String(describing: er)
@@ -370,22 +323,9 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
         } else if ppFunc.contains("TLI") {
             print("func: \(ppFunc)")
             writeMessage(bytes: BCBuildMessages().loadTableLoadInit(input: "103112201427"))
+            valueDataToWrite = DataManagerDefault().tables
             
-        } else if ppFunc.contains("TLR") {
-            print("func: \(ppFunc)")
-
-            DataManagerDefault().tables.forEach { (table) in
-                writeMessage(bytes: BCBuildMessages().loadTableLoadRec(table: table))
-            }
-            //writeMessage(bytes: BCBuildMessages().loadTableLoadRec(table: "0328410107A00000000410100000000000000000000201MASTERCARD ••••••030082008200820769862MERCH00000000011234TERM0001E0F0C06000B0F 00021C8000000000000000000C800000000•••••••••••••••••••••••••••••••• ••••••••••••••••••••••••••••••••••••••••••••••••9F02069F03069F1A029 5055F2A029A039C010000Y1Z1Y3Z306210202101000000000000000000000000000 000302VISA•ELECTRON•••041091030652005060708000000000000000000000030 3VISA•CASH•••••••010000050000000000000000000015210198607612,.R$••1"))
-
-            
-        } else if ppFunc.contains("TLE") {
-            print("func: \(ppFunc)")
-
-            writeMessage(bytes: BCBuildMessages().loadTableLoadEnd())
-            
-        }  else if ppFunc.contains("GTS") {
+        } else if ppFunc.contains("GTS") {
             print("func: \(ppFunc)")
             
             let mMsg = String(format: "%03d", ppFuncTextFiled.text!)
