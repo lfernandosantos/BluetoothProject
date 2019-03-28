@@ -24,6 +24,8 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
     var canWrite = true
     var sizeWrite = 0
     var conta = 0
+    
+    var charToWrite: CBCharacteristic?
 
     var callbackMessage: [String] = [String]()
     var callbackStatus = StatusDeviceMessage.beginning
@@ -91,7 +93,7 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
         scale = peripheral
         print(peripheral)
 
-        if peripheral.identifier.uuidString == /*"BC09EFF0-F1F6-418C-62CA-E3EEEA425610" */ "F4A4339D-AF47-55D0-FE6F-B75ADCDD3C07" {
+        if peripheral.identifier.uuidString == "3F431D68-922F-D574-028C-BBA0497AAB44"/*"BC09EFF0-F1F6-418C-62CA-E3EEEA425610"  "F4A4339D-AF47-55D0-FE6F-B75ADCDD3C07" */{
             centralManager.stopScan()
             scale = peripheral
             pinpad = PinPad(device: peripheral)
@@ -113,22 +115,47 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
         servicesList = peripheral.services
         tableServices.reloadData()
 
-        peripheral.services?.forEach {
-            print($0)
+        peripheral.services?.forEach { ser in
+            print(ser)
+            peripheral.discoverCharacteristics(nil, for: ser)
+
         }
         print("-------------------")
 
     }
+    
+    func setServiceNotify(service: CBService) {
+        service.characteristics?.forEach{
+            print("characteristic ==> > ")
+            print($0)
+            if $0.properties == .notify {
+                scale.setNotifyValue(true, for: $0)
+                print("notifying OK")
+            }
+        }
+        
+    }
+    
+    
+    func setCharToWrite(service: CBService) {
+        service.characteristics?.forEach({ (char) in
+            print(char)
+            let pp = CBCharacteristicProperties.init(rawValue: 0xC)
+            print(String(describing: pp))
+            if char.properties.contains(.write) {
+                charToWrite = char
+                print("more 1")
+            }
+        })
+    }
+    
 
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         charList = service.characteristics
         tableCharac.reloadData()
-        print("characteristics ==> > ")
-        service.characteristics?.forEach{
-            print($0)
-        }
-        print("-------------------")
 
+        setServiceNotify(service: service)
+        setCharToWrite(service: service)
     }
 
     func checkResponse(response: ResponseBC) {
@@ -181,6 +208,10 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
                 print("Error to send data commnad: \(response.function.rawValue) code: \(response.resposeCode.rawValue)")
             }
         
+            if response.function == PinpadCommands.getInfo {
+                let gin = ReadBCMessages().getInfoPinpad(msg: response.message)
+                print(gin)
+            }
             self.text.text = " Func:  \(response.function.rawValue), \n msg: \(response.message)"
 
         }
@@ -226,6 +257,7 @@ extension ViewController: UITableViewDelegate, UITableViewDataSource {
         if (tableView.dequeueReusableCell(withIdentifier: "services") != nil) {
             if let serviceSelected = servicesList?[indexPath.row] {
                 service = serviceSelected
+                
                 scale.discoverCharacteristics(nil, for: serviceSelected)
 
             }
@@ -377,7 +409,7 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
 
             let chunk = Data(bytes: (dataToSend.bytes + sendDataIndex), count: amountToSend)
 
-            scale.writeValue(chunk, for: characteristic!, type: .withResponse)
+            scale.writeValue(chunk, for: charToWrite!, type: .withResponse)
 
             let stringFromData = String(data: chunk, encoding: .utf8)
             print("Sent: \(stringFromData ?? "")")
