@@ -25,9 +25,11 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
     var sizeWrite = 0
     var conta = 0
     
+    var lastFunc: PinpadCommands?
+    
     var charToWrite: CBCharacteristic?
 
-    var callbackMessage: [String] = [String]()
+    var callbackMessage = Data()
     var callbackStatus = StatusDeviceMessage.beginning
     
     
@@ -66,9 +68,9 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
     @IBAction func write(_ sender: Any) {
         
         if ppFuncTextFiled.text!.isEmpty {
-            scale.writeValue(Data(bytes: BCBuildMessages().showDisplay(msg: "     muxiPAY")), for: characteristic!, type: .withResponse)
+            scale.writeValue(Data(bytes: BCBuildMessages().showDisplay(msg: "     muxiPAY")), for: charToWrite!, type: .withResponse)
         } else {
-            scale.writeValue(Data(bytes: BCBuildMessages().showDisplay(msg: ppFuncTextFiled.text ?? "muxiPAY")), for: characteristic!, type: .withResponse)
+            scale.writeValue(Data(bytes: BCBuildMessages().showDisplay(msg: ppFuncTextFiled.text ?? "muxiPAY")), for: charToWrite!, type: .withResponse)
         }
         
     }
@@ -110,24 +112,18 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
     //Peripheral delegate
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
 
-        print("print services ====>>")
-
         servicesList = peripheral.services
         tableServices.reloadData()
 
         peripheral.services?.forEach { ser in
-            print(ser)
             peripheral.discoverCharacteristics(nil, for: ser)
 
         }
-        print("-------------------")
 
     }
     
     func setServiceNotify(service: CBService) {
         service.characteristics?.forEach{
-            print("characteristic ==> > ")
-            print($0)
             if $0.properties == .notify {
                 scale.setNotifyValue(true, for: $0)
                 print("notifying OK")
@@ -139,9 +135,6 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
     
     func setCharToWrite(service: CBService) {
         service.characteristics?.forEach({ (char) in
-            print(char)
-            let pp = CBCharacteristicProperties.init(rawValue: 0xC)
-            print(String(describing: pp))
             if char.properties.contains(.write) {
                 charToWrite = char
                 print("more 1")
@@ -161,58 +154,82 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
     func checkResponse(response: ResponseBC) {
         
         switch response.function {
-        case .tableLoadInit:
+        case .tableLoadInit?:
             self.recTableOnDevice()
-        case .tableLoadRec:
+        case .tableLoadRec?:
             self.recTableOnDevice()
-        case .tableLoadEnd:
+        case .tableLoadEnd?:
             self.finishLoadTable()
-        case .getInfo:
+        case .getInfo?:
             self.getDeviceInfos(info: response.message)
+        case .getCard?:
+            let readGCR = BCBuildMessages().readMessage(data: callbackMessage)
+            let getcard = GetCard.from(bc: readGCR.message)
+            if let getcard = getcard {
+                
+            }
+            callbackMessage = Data()
+        case .goOnChip?:
+            let readed = BCBuildMessages().readMessage(data: callbackMessage)
+            ReadBCMessages().readGoOnChip(output: readed.message)
         default:
             print("without continuation.")
         }
+        
+        callbackMessage = Data()
         
     }
     
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         print("didUpdateValueFor")
         
-        canWrite = true
+        
         if let error = error {
             print(error)
         }
         
         if let data = characteristic.value {
 
+            callbackMessage += data
+            
             print(String(data: data, encoding: .ascii))
             
-            let response = BCBuildMessages().readMessage(data: data)
+            let response = BCBuildMessages().readMessage(data: data, lastFunc: lastFunc)
             
             switch response.resposeCode {
-            case .pp_ok:
-                do {
-                    switch response.statusMessage {
-                    case .beginning: print("beginning")
-                    case .middle:
-                        print("middle")
-                        print(response.message)
-                    case .end: do {
-                        print("end")
-                        print(response.message)
-                        checkResponse(response: response)
-                        }
-                    }
-                }
+            case .pp_ok?:
+                print("pp ok")
             default:
-                print("Error to send data commnad: \(response.function.rawValue) code: \(response.resposeCode.rawValue)")
+                print("Error to send data commnad: \(response.function?.rawValue) code: \(response.resposeCode?.rawValue)")
+            }
+            switch response.statusMessage {
+            case .beginning: print("beginning")
+            lastFunc = response.function
+            case .middle:
+                print("middle")
+                print(response.message)
+            case .end: do {
+                print("end")
+                print(response.message)
+                lastFunc = nil
+                checkResponse(response: response)
+                canWrite = true
+                }
             }
         
             if response.function == PinpadCommands.getInfo {
                 let gin = ReadBCMessages().getInfoPinpad(msg: response.message)
                 print(gin)
             }
-            self.text.text = " Func:  \(response.function.rawValue), \n msg: \(response.message)"
+            
+            if response.function == .tableLoadInit {
+                
+            }
+            
+            if response.function == .goOnChip {
+                
+            }
+            self.text.text = " Func:  \(response.function?.rawValue), \n msg: \(response.message)"
 
         }
     }
@@ -386,6 +403,7 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
 
     func writeMessage(bytes: [UInt8]) {
 
+        callbackMessage = Data()
         var buffer = bytes
 
         let commandLength = buffer.count

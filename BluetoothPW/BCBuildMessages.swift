@@ -22,11 +22,11 @@ enum ResponseCodeBC: String{
     case pp_notify      = "002"
     case pp_cancel      = "013"
 
-    static func getFromString(code: String?) -> ResponseCodeBC {
+    static func getFromString(code: String?) -> ResponseCodeBC? {
         if let code = code, let responseCode = ResponseCodeBC.init(rawValue: code) {
             return responseCode
         } else {
-            return self.pp_cancel
+            return nil
         }
     }
 }
@@ -221,14 +221,21 @@ struct BCBuildMessages {
         return msgFinishiChip
     }
 
-    func readMessage(data: Data) -> ResponseBC  {
+    func readMessage(data: Data, lastFunc: PinpadCommands? = nil) -> ResponseBC  {
 
         var bytes = [UInt8](data)
         let nak: UInt8 = 0x15
+        let initMSG: UInt8 = 0x16
+        let last: UInt8 = 0x17
         
         var firstByte = bytes[0]
         var function = [UInt8]()
+        var statusMSG: StatusDeviceMessage
 
+        var crc = [UInt8]()
+        
+        var responseCodeByte = [UInt8]()
+        
         let okByte: UInt8 = 0x06
 
         if bytes.count < 2 {
@@ -251,57 +258,104 @@ struct BCBuildMessages {
             
             //ignore okbyte on first position
             firstByte = bytes[1]
-            function.append(bytes[2])
-            function.append(bytes[3])
-            function.append(bytes[4])
             
-            bytes.removeFirst(5)
+            if firstByte == initMSG {
+                
+                function.append(bytes[2])
+                function.append(bytes[3])
+                function.append(bytes[4])
+                
+                bytes.removeFirst(5)
+                statusMSG = .beginning
+                
+                responseCodeByte.append(bytes[0])
+                responseCodeByte.append(bytes[1])
+                responseCodeByte.append(bytes[2])
+                
+                //remove responseCode
+                bytes.removeFirst(3)
+            } else {
+                
+//                function.append(bytes[1])
+//                function.append(bytes[2])
+//                function.append(bytes[3])
+//
+//                bytes.removeFirst(4)
+                statusMSG = .middle
+            }
+            
 
         } else {
             
-            function.append(bytes[1])
-            function.append(bytes[2])
-            function.append(bytes[3])
-
-            bytes.removeFirst(4)
+            if firstByte == initMSG {
+                
+                function.append(bytes[1])
+                function.append(bytes[2])
+                function.append(bytes[3])
+                
+                bytes.removeFirst(4)
+                statusMSG = .beginning
+                
+                responseCodeByte.append(bytes[0])
+                responseCodeByte.append(bytes[1])
+                responseCodeByte.append(bytes[2])
+                
+                //remove responseCode
+                bytes.removeFirst(3)
+                
+            } else {
+                
+//                function.append(bytes[0])
+//                function.append(bytes[1])
+//                function.append(bytes[2])
+//
+//                bytes.removeFirst(3)
+                statusMSG = .middle
+            }
+            
         }
 
         
-        var crc = [UInt8]()
-        crc.append(bytes[bytes.count - 2])
-        crc.append(bytes[bytes.count - 1])
+        var lastByte: UInt8 = bytes[bytes.count - 3]
         
-        //remove crc from msg
-        bytes.removeLast(2)
+        if lastByte == last {
+            crc.append(bytes[bytes.count - 2])
+            crc.append(bytes[bytes.count - 1])
+            
+            //remove crc from msg
+            bytes.removeLast(3)
+            statusMSG = .end
+        }
         
-        let lastByte = bytes.last!
-        
-        var responseCodeByte = [UInt8]()
-        responseCodeByte.append(bytes[0])
-        responseCodeByte.append(bytes[1])
-        responseCodeByte.append(bytes[2])
         
         let codeStr = String(bytes: responseCodeByte, encoding: .ascii)
         
         let responseCode = ResponseCodeBC.getFromString(code: codeStr)
+        print(responseCode)
         
-        switch responseCode {
-        case .pp_ok: print("OK")
-        default: do {
-            
+//        switch responseCode {
+//        case .pp_ok: print("OK")
+//
+//        default: do {
+//            print(responseCode)
+////            let message = String(bytes: bytes, encoding: .ascii)!
+////            let response = ResponseBC(resposeCode: .pp_ok, function: .close, statusMessage: .end, sizeMessage: "000", message: message)
+////            return response
+//
+//            }
+//
+//        }
+        
+        guard let rCode = responseCode else {
             let message = String(bytes: bytes, encoding: .ascii)!
-            let response = ResponseBC(resposeCode: .pp_ok, function: .close, statusMessage: .end, sizeMessage: "000", message: message)
+            let response = ResponseBC(resposeCode: nil, function: lastFunc, statusMessage: statusMSG, sizeMessage: "000", message: message)
             return response
-            
-            }
-            
         }
         
-        let code =  responseCode
+        
         let bcCommnad = getBCFunction(function: Data(function))
         
-        //remove responseCode
-        bytes.removeFirst(3)
+       
         
         var size = "000"
         
@@ -317,21 +371,10 @@ struct BCBuildMessages {
             size  = String(bytes: inputSize, encoding: .ascii)!
         }
         
-        
-        if lastByte == 23 {
-            
-            //remove last position
-            bytes.removeLast()
-            
-            let message = String(bytes: bytes, encoding: .ascii)!
-            let response = ResponseBC(resposeCode: code, function: bcCommnad, statusMessage: .end, sizeMessage: size, message: message)
-            return response
-        } else {
-            
-            let message = String(bytes: bytes, encoding: .ascii)!
-            let response = ResponseBC(resposeCode: code, function: bcCommnad, statusMessage: .middle, sizeMessage: size, message: message)
-            return response
-        }
+        let message = String(bytes: bytes, encoding: .ascii)!
+        let response = ResponseBC(resposeCode: rCode, function: bcCommnad, statusMessage: statusMSG, sizeMessage: size, message: message)
+        return response
+    
         
     }
 
@@ -340,7 +383,7 @@ struct BCBuildMessages {
         return PinpadCommands.getFromString(function: strFunc)
     }
     
-    func getResponseCodeBC(buffer: [UInt8]) -> ResponseCodeBC {
+    func getResponseCodeBC(buffer: [UInt8]) -> ResponseCodeBC? {
         let str = String(bytes: buffer, encoding: .ascii)
         return ResponseCodeBC.getFromString(code: str)
     }
@@ -385,12 +428,53 @@ struct ReadBCMessages {
         return GetInfoAcquirer(applicationVersion: applicationVersion, acquirer: acquirer, acquirerInfo: acquirerInfo, idSAMSize: idSAMSize, idSAM: idSAM)
         
     }
+    
+    func readGoOnChip(output: String) {
+        
+        let str = output
+        let decision = output.substring(fromIndex: 0, toIndex: 1)
+        let needAsign = output.substring(fromIndex: 1, toIndex: 2)
+        let pinVerifiedOff = output.substring(fromIndex: 2, toIndex: 3)
+        let pinNumberValidAppearsOff = output.substring(fromIndex: 3, toIndex: 4)
+        let pinOffBloquedLastAppear = output.substring(fromIndex: 4, toIndex: 5)
+        let pinToVerifyOn = output.substring(fromIndex: 5, toIndex: 6)
+        var encryptedPin: String? = nil
+        var keySerialNumber: String? = nil
+        
+        if pinToVerifyOn == "1" {
+            encryptedPin = output.substring(fromIndex: 6, toIndex: 22)
+            keySerialNumber = output.substring(fromIndex: 22, toIndex: 42)
+        }
+        
+        let isoFieldSize = output.substring(fromIndex: 42, toIndex: 45)
+        var emvTags: String?
+        var sizeDataAquirer: String
+        var dataAquirer: String?
+        if let emvTagsSize = Int(isoFieldSize), emvTagsSize > 0 {
+            emvTags = output.substring(fromIndex: 45, toIndex: emvTagsSize + 45)
+            sizeDataAquirer = output.substring(fromIndex: emvTagsSize + 45, toIndex: emvTagsSize + 45 + 3 )
+            
+            if let sizeDataAquirerInt = Int(sizeDataAquirer) {
+                dataAquirer = output.substring(fromIndex: emvTagsSize + 45 + 3, toIndex: emvTagsSize + 45 + 3 + sizeDataAquirerInt )
+            }
+            
+        } else {
+            
+            sizeDataAquirer = output.substring(fromIndex: 48, toIndex:  48 + 3 )
+            
+            if let sizeDataAquirerInt = Int(sizeDataAquirer) {
+                dataAquirer = output.substring(fromIndex: 48 + 3, toIndex: 48 + 3 + sizeDataAquirerInt )
+            }
+        }
+        
+        
+    }
 }
 
 
 struct ResponseBC {
-    let resposeCode: ResponseCodeBC
-    let function: PinpadCommands
+    let resposeCode: ResponseCodeBC?
+    let function: PinpadCommands?
     let statusMessage: StatusDeviceMessage
     let sizeMessage: String
     let message: String
