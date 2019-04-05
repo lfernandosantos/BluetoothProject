@@ -21,7 +21,25 @@ enum ResponseCodeBC: String{
     case pp_processing  = "001"
     case pp_notify      = "002"
     case pp_cancel      = "013"
+    case pp_tabExp      = "020"
 
+    
+    func getMessage() -> String {
+        switch self {
+        case .pp_ok:
+            return "Operação efetuada com sucesso."
+        case .pp_processing:
+            return "Em processamento."
+        case .pp_notify:
+            return "Em processamento."
+        case .pp_cancel:
+            return "Operação cancelada pelo operador."
+        case .pp_tabExp:
+            return "Tabelas expiradas (pelo “time-stamp”)."
+        }
+    }
+    
+    
     static func getFromString(code: String?) -> ResponseCodeBC? {
         if let code = code, let responseCode = ResponseCodeBC.init(rawValue: code) {
             return responseCode
@@ -466,8 +484,6 @@ struct ReadBCMessages {
                 dataAquirer = output.substring(fromIndex: 48 + 3, toIndex: 48 + 3 + sizeDataAquirerInt )
             }
         }
-        
-        
     }
 }
 

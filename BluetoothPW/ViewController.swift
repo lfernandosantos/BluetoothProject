@@ -26,12 +26,19 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
     var conta = 0
     
     var lastFunc: PinpadCommands?
+    var resultLasGetCard:String = "0"
     
     var charToWrite: CBCharacteristic?
 
     var callbackMessage = Data()
     var callbackStatus = StatusDeviceMessage.beginning
     
+    let idList = ["1001", "1003", "1005", "1006", "1007"]
+    var currentAmount = 0
+    let currentTimeStampKey: String = "timeStampKey"
+    var currentTimeStamp: String {
+        return UserDefaults.standard.string(forKey: currentTimeStampKey) ?? ""
+    }
     
     var valueDataToWrite: [String] = [String]()
     
@@ -72,7 +79,6 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
         } else {
             scale.writeValue(Data(bytes: BCBuildMessages().showDisplay(msg: ppFuncTextFiled.text ?? "muxiPAY")), for: charToWrite!, type: .withResponse)
         }
-        
     }
 
     
@@ -95,7 +101,7 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
         scale = peripheral
         print(peripheral)
 
-        if peripheral.identifier.uuidString == "3F431D68-922F-D574-028C-BBA0497AAB44"/*"BC09EFF0-F1F6-418C-62CA-E3EEEA425610"  "F4A4339D-AF47-55D0-FE6F-B75ADCDD3C07" */{
+        if peripheral.identifier.uuidString == "0D16ED8B-ABB1-81BB-1F36-76BE5D559FE4" /*3F431D68-922F-D574-028C-BBA0497AAB44" "BC09EFF0-F1F6-418C-62CA-E3EEEA425610"  "F4A4339D-AF47-55D0-FE6F-B75ADCDD3C07" */{
             centralManager.stopScan()
             scale = peripheral
             pinpad = PinPad(device: peripheral)
@@ -163,15 +169,25 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
         case .getInfo?:
             self.getDeviceInfos(info: response.message)
         case .getCard?:
+            if lastFunc! == .startGetCard {
+                let readGCR = BCBuildMessages().readMessage(data: callbackMessage)
+                let getcard = GetCard.from(bc: readGCR.message)
+                print(getcard)
+                getCardResult()
+            } else {
+                startGoOnChip(amount: currentAmount)
+            }
+            
+            callbackMessage = Data()
+        case .startGetCard?:
             let readGCR = BCBuildMessages().readMessage(data: callbackMessage)
             let getcard = GetCard.from(bc: readGCR.message)
-            if let getcard = getcard {
-                
-            }
-            callbackMessage = Data()
+            print(getcard)
+            getCardResult()
         case .goOnChip?:
             let readed = BCBuildMessages().readMessage(data: callbackMessage)
-            ReadBCMessages().readGoOnChip(output: readed.message)
+            let goOnChip = GoOnChip.from(bc: readed.message)
+            print(goOnChip)
         default:
             print("without continuation.")
         }
@@ -182,7 +198,6 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
     
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         print("didUpdateValueFor")
-        
         
         if let error = error {
             print(error)
@@ -211,60 +226,54 @@ class ViewController: UIViewController , CBCentralManagerDelegate, CBPeripheralD
             case .end: do {
                 print("end")
                 print(response.message)
-                lastFunc = nil
+                
                 checkResponse(response: response)
                 canWrite = true
                 }
             }
         
-            if response.function == PinpadCommands.getInfo {
-                let gin = ReadBCMessages().getInfoPinpad(msg: response.message)
-                print(gin)
-            }
-            
-            if response.function == .tableLoadInit {
-                
-            }
-            
-            if response.function == .goOnChip {
-                
-            }
             self.text.text = " Func:  \(response.function?.rawValue), \n msg: \(response.message)"
 
         }
     }
-    
-    
    
-
-    func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
-        print("didUpdateNotificationStateFor")
-        
-        if let error = error {
-            print(error)
-        }
-        
+    func getCurrentTime() -> String {
+        //get current hour
+        let hourFormatter = DateFormatter()
+        hourFormatter.dateFormat = "HHmmss"
+        return hourFormatter.string(from: Date())
+    }
     
-        if let data = characteristic.value {
-            
-            print(String(data: data, encoding: String.Encoding.ascii))
-            print("bytes in str: ")
-            
-            let weigth: UInt8 = data.withUnsafeBytes{ $0.pointee}
-            
-            
-            text.text = " ascii: \(String(data: data, encoding: String.Encoding.ascii)) \n charc: \(characteristic) "
+    func getCurrentDate( isInitialization: Bool) -> String {
+        
+        if isInitialization{
+            //get current date
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyyMMddHHmmss"
+            return dateFormatter.string(from: Date())
+        } else {
+            //get current date
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyMMdd"
+            return dateFormatter.string(from: Date())
         }
-
-        if let er = error {
-            text.text = String(describing: er)
-        }
+        
+    }
+    
+    func getNewTimeStamp()-> String {
+        var sequencial = (UserDefaults.standard.integer(forKey: "timeStamp"))
+        
+        sequencial += 1
+        UserDefaults.standard.set(sequencial, forKey: "timeStamp")
+        
+        let newSeq = String(format: "%02d", sequencial)
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "ddMMyyyy"
+    
+        return dateFormatter.string(from: Date()) + newSeq
     }
 
-    func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor descriptor: CBDescriptor, error: Error?) {
-        print("didUpdateValueFor descriptor")
-
-    }
 }
 
 extension ViewController: UITableViewDelegate, UITableViewDataSource {
@@ -341,6 +350,35 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
         clickFunc(items[indexPath.row].ppfunc)
     }
     
+    
+    
+    fileprivate func startGetCard(amount: Int, acquirer: Common.AcquirerID, appType: ApplicationType) {
+        
+        var entries: [String]
+        if appType == .credito {
+            entries = DataManager.getCreditEntries()
+        } else {
+            entries = DataManager.getDebitEntries()
+        }
+        
+
+        
+        let startGetCard = StartGetCard(idAcquirer: acquirer.rawValue, applicationType: appType.getInputValue(), transactionValue: amount, transactionDate: getCurrentDate(isInitialization: false), transactionHour: getCurrentTime(), timeStamp: currentTimeStamp, entries: entries, supportCTLS: "0")
+        
+        lastFunc = .startGetCard
+        let inputStartGetCard = BCBuildMessages().startGetCard(input: startGetCard.getStartGetCardInput())
+        writeMessage(bytes: inputStartGetCard)
+        
+    }
+    
+    fileprivate func finishChip() {
+        
+        let finishChip = FinishChip(comunicationStatus: "0", emitterType: "0", authotizationResponseCode: "00", field55: "", acquirerEntries: "", psTags: "9F029F039F1A955F2A9A9C9F379F359F279F26829F369F109F345F349F339F1E9F099F419F069F0D9F0E9F0F9F429F3B5F285F555F569F07")
+        
+        print(finishChip.getFinishChipInput() + finishChip.getPsTagsInput())
+        writeMessage(bytes: BCBuildMessages().finishChip(input: finishChip.getFinishChipInput(), inputTags: finishChip.getPsTagsInput()))
+    }
+    
     func clickFunc(_ ppFunc: String) {
         if ppFunc.contains("GIN") {
             print("func: GIN")
@@ -362,7 +400,9 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
         } else if ppFunc.contains("SGC") {
             print("func: \(ppFunc)")
 
-            writeMessage(bytes: BCBuildMessages().startGetCard(input: "100000000000200019021220220531122014270510011003100510061007"))
+            let amount  = Int(ppFuncTextFiled.text!) ?? 0
+            currentAmount = amount
+            startGetCard(amount: amount, acquirer: .clearent, appType: .credito)
             
         } else if ppFunc.contains("GCR") {
             print("func: \(ppFunc)")
@@ -371,23 +411,21 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
             
         } else if ppFunc.contains("TLI") {
             print("func: \(ppFunc)")
-            writeMessage(bytes: BCBuildMessages().loadTableLoadInit(input: "103112201427"))
-            valueDataToWrite = DataManagerDefault().tables
+            
+            initializeTerminal()
+            
+//            writeMessage(bytes: BCBuildMessages().loadTableLoadInit(input: "000903201903"))
+//            valueDataToWrite = DataManagerDefault().tables
             
         } else if ppFunc.contains("GTS") {
             print("func: \(ppFunc)")
-            
             let mMsg = String(format: "%03d", ppFuncTextFiled.text!)
-           writeMessage(bytes: BCBuildMessages().getTimeStampt(input:"00"))
+            writeMessage(bytes: BCBuildMessages().getTimeStampt(input:"10"))
             
         } else if ppFunc.contains("GOCS") {
             print("func: \(ppFunc)")
             
-            let input = "000000000500000000000000010301                                100000FA010000003E899000"
-            let tags = "023829F279F269F36959F349F379F335F289F109A5F349F0B"
-            let tagsOpt = "000"
-
-            writeMessage(bytes: BCBuildMessages().startGoOnChip(input: input, tags: tags, tagsOpt: tagsOpt))
+            startGoOnChip(amount: currentAmount)
 
             
         } else if ppFunc.contains("GOC") {
@@ -396,7 +434,7 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
             writeMessage(bytes: BCBuildMessages().goOnChip(input: "086000000000500000000000000010301                                100000FA010000003E899000049023829F279F269F36959F349F379F335F289F109A5F349F0B003000"))
 
         } else if ppFunc.contains("FNC") {
-            writeMessage(bytes: BCBuildMessages().finishChip(input: "0000000000", inputTags: "0569F029F039F1A955F2A9A9C9F379F359F279F26829F369F109F345F349F339F1E9F099F419F069F0D9F0E9F0F9F429F3B5F285F555F569F07"))
+            finishChip()
         }
 
     }
@@ -439,18 +477,76 @@ extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource {
 
 extension ViewController {
     
+    func initializeTerminal() {
+        let initService = InitializationService()
+        
+        let initializationRequest = InitializationRequest.init(mti: MTIValue.initialization.rawValue, processingCode: ProcessingCode.initialization.rawValue, transmissionDate: getCurrentDate(isInitialization: true) , stan: "000001", transactionDate: getCurrentDate(isInitialization: true), acquirerID: Common.AcquirerID.global.rawValue, terminalID: "00000000", merchantID: "1234", customerID: "muxi", manufacturer: "Apple", pverfm: "CQMAN", serialNumber: "1234567890", chipLibraryVersion: "1.08v2", emvKernelVersion: "1.2.212", browserVersion: "0", posnetVersion: "0", ipVersion: "1.08a", applicationVersion: "0.1", connectionMode: "05", connectionDetails: "2123123;21999999999;10.10.8.3", pinpadSerialNumber: "7B499090", pinpadFirmware: "PP_GetInfo", initializationFormatVersion: "0.1", model: "iPhone", memoryCapacity: "0M")
+        
+        initService.initialize(initializationRequest: initializationRequest) { (success, obj) in
+            if let tables = obj?.initialization?.aidTable {
+                
+                var listIdsCredit: [String] = []
+                var listIdsDebit: [String] = []
+                
+                //save index table register
+                tables.forEach { (tab) in
+                    if let appType = tab.aidTableRegistry?.getApplicationType(){
+                        if let aidCode = tab.aidTableRegistry?.aidCode {
+                            let aidTab = String(format: "%02d", aidCode)
+                            
+                            if appType == .credito {
+                                listIdsCredit.append(aidTab)
+                            } else {
+                                listIdsDebit.append(aidTab)
+                            }
+                        }
+                        
+                    }
+                }
+                DataManager.setCreditEntries(entries: listIdsCredit)
+                DataManager.setDebitEntries(entries: listIdsDebit)
+                
+                
+                self.valueDataToWrite = []
+
+                tables.forEach { t in
+                    if let input = t.aidTableRegistry?.getInputTable(acquirerID: "10", countryCode: 076, merchandID: 123456789, merchantCategoryCode: 3502, terminalID: "00000643") {
+                        print(input)
+                        self.valueDataToWrite.append(input)
+                    }
+                    
+                }
+                self.tableInit()
+                
+            }
+        }
+    }
     
+    func tableInit() {
+        
+        let timestamp = getNewTimeStamp()
+        UserDefaults.standard.set(timestamp, forKey: currentTimeStampKey)
+        writeMessage(bytes: BCBuildMessages().loadTableLoadInit(input: "10" + timestamp))
+    }
     @objc func recTableOnDevice() {
+        
+       
         if let firt = valueDataToWrite.first {
             writeMessage(bytes: BCBuildMessages().loadTableLoadRec(table: firt))
+            
             valueDataToWrite.removeFirst()
         } else {
             self.writeMessage(bytes: BCBuildMessages().loadTableLoadEnd())
         }
     }
     
+    
     func finishLoadTable() {
-        self.scale.writeValue(Data(bytes: BCBuildMessages().showDisplay(msg: "Tabelas Atualizadas!")), for: self.characteristic!, type: .withResponse)
+
+       // saveTablesRegisterIndex()
+        
+        writeMessage(bytes: BCBuildMessages().showDisplay(msg: "Tabelas Atualizadas!"))
+        
     }
     
     func getDeviceInfos(info: String) {
@@ -460,6 +556,21 @@ extension ViewController {
             print(String(describing: getInfoG))
             
         }
+    }
+    
+    func getCardResult(){
+        lastFunc = .getCard
+        writeMessage(bytes: BCBuildMessages().getCard())
+    }
+    
+    fileprivate func startGoOnChip(amount: Int) {
+        
+        let startGoOnChip = StartGoOnChip(amount: amount, cashback: 0, blackListResult: "0", canBeOff: "1", requiredPINOnTEF: "0", encryptionMode: "3", masterKeyIndex: "01", workingKey: "                                ", trm: "1", floorLimit: "00000FA0", targetPercentRDM: 10, thresholdValueRDM: "000003E8", maxTargetPercentageRDM: 99, entries: [], psEmvTags: "829F279F269F36959F349F379F335F289F109A5F349F0B", psEmvTagsOpt: "")
+        
+        writeMessage(bytes: BCBuildMessages().startGoOnChip(input: startGoOnChip.getStartGetCardInput(), tags: startGoOnChip.getPsEmvTagsInput(), tagsOpt: startGoOnChip.getPsEmvTagsOptInput()))
+    }
+    
+    func startFinishChip() {
         
     }
 }

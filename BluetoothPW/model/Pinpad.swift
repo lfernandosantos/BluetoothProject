@@ -15,6 +15,7 @@ enum PinpadCommands: String {
     case display        = "DSP"
     case close          = "CLO"
     case getCard        = "GCR"
+    case startGetCard
     case goOnChip       = "GOC"
     case getTimeStamp   = "GTS"
     case tableLoadInit  = "TLI"

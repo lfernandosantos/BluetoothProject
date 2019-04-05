@@ -35,7 +35,7 @@ struct GetCard {
     let sizeDataAcquirer: String?
     let dataAcquirer: String?
     
-    static func from(bc message: String) -> GetCard{
+    static func from(bc message: String) -> GetCard {
         let bc_typeCard = message.substring(fromIndex: 0, toIndex: 2)
         let bc_lastReadStatus = message.substring(fromIndex: 2, toIndex: 3)
         let bc_applicationSelected = message.substring(fromIndex: 3, toIndex: 5)
